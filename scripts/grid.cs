@@ -1,13 +1,22 @@
 using Godot;
 using System;
 
+enum GameStates {
+	WAIT,
+	MOVE
+}
+
+
 public class grid : Node2D
 {
+	private GameStates state;
+
 	[Export] private int width;
 	[Export] private int height;
 	[Export] private int x_start;
 	[Export] private int y_start;
 	[Export] private int offset;
+	[Export] private int y_offset;
 
 	private PackedScene[] possible_pieces = new PackedScene[]
 	{
@@ -20,12 +29,20 @@ public class grid : Node2D
 
 	};
 	private Piece[,] all_pieces;
+	private Piece pieceOne;
+	private Piece pieceTwo;
+	private bool move_checked = false;
+	private Vector2 lastPlace = new Vector2(0, 0);
+	private Vector2 lastDirection = new Vector2(0, 0);
+
 	private Vector2 firstTouch = new Vector2(0, 0);
 	private Vector2 finalTouch = new Vector2(0, 0);
 	private bool controlling = false;
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
+		state = GameStates.MOVE;
+
 		GD.Randomize();
 		all_pieces = new Piece[width, height];
 		spawnPieces();
@@ -97,6 +114,23 @@ public class grid : Node2D
 
 		}
 	}
+	private void swapBack()
+    {
+		if (pieceOne != null && pieceTwo != null)
+		{
+			swapPieces((int)lastPlace.x, (int)lastPlace.y, lastDirection);
+			state = GameStates.MOVE;
+			move_checked = false;
+		}
+
+    }
+	private void storeInfo( Piece firstPiece, Piece otherPiece, Vector2 place, Vector2 direction)
+    {
+		pieceOne = firstPiece;
+		pieceTwo = otherPiece;
+		lastPlace = place;
+		lastDirection = direction;
+    }
 
 	private void swapPieces(int coll, int row, Vector2 direction)
 	{
@@ -104,11 +138,15 @@ public class grid : Node2D
 		var otherPiece = all_pieces[coll + (int)direction.x, row + (int)direction.y];
 		if (firstPiece !=null && otherPiece!=null)
 		{
+			storeInfo(firstPiece, otherPiece, new Vector2(coll, row), direction);
+			state = GameStates.WAIT;
+
 			all_pieces[coll, row] = otherPiece;
 			all_pieces[coll + (int)direction.x, row + (int)direction.y] = firstPiece;
 			firstPiece.move(gridToPixel(coll + (int)direction.x, row + (int)direction.y));
 			otherPiece.move(gridToPixel(coll, row));
-			findmatches();
+			if (!move_checked)
+			 findmatches();
 		}
 		
 	}
@@ -200,13 +238,15 @@ public class grid : Node2D
 
 	public override void _Process(float delta)
 	{
-		touchInput();
+		if (state == GameStates.MOVE)
+		   touchInput();
 
 	}
 
 
 	private void destroyMached()
 	{
+		bool was_mached = false;
 		for (int i = 0; i < width; i++)
 			for (int j = 0; j < height; j++)
 			{
@@ -214,14 +254,18 @@ public class grid : Node2D
 				{
 					if (all_pieces[i, j].matched)
 					{
+						was_mached = true;
 						all_pieces[i, j].QueueFree();
 						all_pieces[i, j] = null;
 					}					
 						
 				}
 			}
-
-	  (GetParent().GetNode("collapse_timer") as Timer).Start();
+		move_checked = true;
+		if (was_mached)
+			(GetParent().GetNode("collapse_timer") as Timer).Start();
+		else
+			swapBack();
 
 	}
 
@@ -277,9 +321,32 @@ public class grid : Node2D
 						loops += 1;
 					}
 					AddChild(piece);
-					piece.Position = gridToPixel(i, j);
+					piece.Position = gridToPixel(i, j-y_offset);
+					piece.move(gridToPixel(i, j));
 					all_pieces[i, j] = piece;
 				}
 			}
+		afterRefillColumns();
+	}
+
+	public void afterRefillColumns()
+	{
+		for (int i = 0; i < width; i++)
+			for (int j = 0; j < height; j++)
+			{
+				if (all_pieces[i, j] != null)
+				{
+					if (mathAt(i, j, all_pieces[i, j].color))
+					{
+						findmatches();
+						(GetParent().GetNode("destroy_timer") as Timer).Start();
+						return;
+					}
+
+				}
+
+			}
+		state = GameStates.MOVE;
+		move_checked = false;
 	}
 }
