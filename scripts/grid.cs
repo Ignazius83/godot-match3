@@ -17,6 +17,13 @@ public class grid : Node2D
 	[Export] private int y_start;
 	[Export] private int offset;
 	[Export] private int y_offset;
+	[Export] private Vector2[] empty_spaces;
+	[Export] private Vector2[] ice_spaces;
+
+	[Signal]
+	delegate void damage_ice(Vector2 boardPosition);
+	[Signal]
+	delegate void make_ice(Vector2 boardPosition);
 
 	private PackedScene[] possible_pieces = new PackedScene[]
 	{
@@ -46,6 +53,13 @@ public class grid : Node2D
 		GD.Randomize();
 		all_pieces = new Piece[width, height];
 		spawnPieces();
+		spawnIce();
+	}
+	private void spawnIce()
+    {
+		for (int i = 0; i < ice_spaces.Length; i++)
+			EmitSignal("make_ice", ice_spaces[i]);
+
 	}
 
 	private void spawnPieces()
@@ -53,19 +67,22 @@ public class grid : Node2D
 		for (int i = 0; i < width; i++)
 			for (int j = 0; j < height; j++)
 			{
-				var rand = (int)Math.Floor(GD.RandRange(0, possible_pieces.Length));
-				var piece = (Piece)possible_pieces[rand].Instance();
-
-				var loops = 0;
-				while (mathAt(i, j, piece.color) && loops < 100)
+				if (!restrictedFill(new Vector2(i, j)))
 				{
-					rand = (int)Math.Floor(GD.RandRange(0, possible_pieces.Length));
-					piece = (Piece)possible_pieces[rand].Instance();
-					loops += 1;
+					var rand = (int)Math.Floor(GD.RandRange(0, possible_pieces.Length));
+					var piece = (Piece)possible_pieces[rand].Instance();
+
+					var loops = 0;
+					while (mathAt(i, j, piece.color) && loops < 100)
+					{
+						rand = (int)Math.Floor(GD.RandRange(0, possible_pieces.Length));
+						piece = (Piece)possible_pieces[rand].Instance();
+						loops += 1;
+					}
+					AddChild(piece);
+					piece.Position = gridToPixel(i, j);
+					all_pieces[i, j] = piece;
 				}
-				AddChild(piece);
-				piece.Position = gridToPixel(i, j);
-				all_pieces[i, j] = piece;
 			}
 	}
 
@@ -124,6 +141,25 @@ public class grid : Node2D
 		}
 
     }
+
+	private bool restrictedFill(Vector2 place)
+    {
+		if (isInArray(empty_spaces,place))
+			return true;
+       
+		return false;
+    }
+	
+
+	private bool isInArray(Vector2[] array,Vector2 item)
+    {
+		for (int i = 0; i < array.Length; i++)
+		{
+			if (array[i] == item)
+				return true;
+		}
+		return false;
+	}
 	private void storeInfo( Piece firstPiece, Piece otherPiece, Vector2 place, Vector2 direction)
     {
 		pieceOne = firstPiece;
@@ -183,34 +219,28 @@ public class grid : Node2D
 					var currentColor = all_pieces[i, j].color;
 					if (i > 0 && i < width - 1)
 					{
-						if (all_pieces[i - 1, j] != null && all_pieces[i + 1, j] != null)
+						if (!isPieceNull(i - 1, j) && !isPieceNull(i + 1, j))
 						{
 							if (all_pieces[i - 1, j].color == currentColor &&
 								all_pieces[i + 1, j].color == currentColor)
 							{
-								all_pieces[i - 1, j].matched = true;
-								all_pieces[i - 1, j].dim();
-								all_pieces[i + 1, j].matched = true;
-								all_pieces[i + 1, j].dim();
-								all_pieces[i, j].matched = true;
-								all_pieces[i, j].dim();
+								matchAndDim(all_pieces[i - 1, j]);
+								matchAndDim(all_pieces[i + 1, j]);
+								matchAndDim(all_pieces[i, j]);							
 
 							}
 						}
 					}
 					if (j > 0 && j < height - 1)
 					{
-						if (all_pieces[i, j - 1] != null && all_pieces[i, j + 1] != null)
+						if (!isPieceNull(i, j-1) && !isPieceNull(i, j+1))
 						{
 							if (all_pieces[i, j - 1].color == currentColor &&
 								all_pieces[i, j + 1].color == currentColor)
 							{
-								all_pieces[i, j - 1].matched = true;
-								all_pieces[i, j - 1].dim();
-								all_pieces[i, j + 1].matched = true;
-								all_pieces[i, j + 1].dim();
-								all_pieces[i, j].matched = true;
-								all_pieces[i, j].dim();
+								matchAndDim(all_pieces[i, j-1]);
+								matchAndDim(all_pieces[i, j+1]);
+								matchAndDim(all_pieces[i, j]);								
 
 							}
 						}
@@ -220,6 +250,19 @@ public class grid : Node2D
 				}
 			}
 		(GetParent().GetNode("destroy_timer") as Timer).Start();
+	}
+
+	private bool isPieceNull(int col, int row)
+    {
+		if (all_pieces[col, row] == null)
+			return true;
+		return false;
+    }
+
+	private void matchAndDim(Piece item)
+	{
+		item.matched = true;
+		item.dim();
 	}
 	private bool mathAt(int i, int j, string color)
 	{
@@ -254,6 +297,7 @@ public class grid : Node2D
 				{
 					if (all_pieces[i, j].matched)
 					{
+						EmitSignal("damage_ice", new Vector2(i, j));
 						was_mached = true;
 						all_pieces[i, j].QueueFree();
 						all_pieces[i, j] = null;
@@ -274,7 +318,7 @@ public class grid : Node2D
 		for (int i = 0; i < width; i++)
 			for (int j = 0; j < height; j++)
 			{
-				if (all_pieces[i,j] == null)
+				if (all_pieces[i,j] == null && !restrictedFill(new Vector2(i, j)))
 					foreach (int k in GD.Range(j + 1, height))
 						if (all_pieces[i,k] != null)
 						{
@@ -308,7 +352,7 @@ public class grid : Node2D
 		for (int i = 0; i < width; i++)
 			for (int j = 0; j < height; j++)
 			{
-				if (all_pieces[i, j] == null)
+				if (all_pieces[i, j] == null && !restrictedFill(new Vector2(i, j)))
 				{
 					var rand = (int)Math.Floor(GD.RandRange(0, possible_pieces.Length));
 					var piece = (Piece)possible_pieces[rand].Instance();
