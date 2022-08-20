@@ -1,5 +1,6 @@
 using Godot;
 using System;
+using System.Collections.Generic;
 
 enum GameStates {
 	WAIT,
@@ -19,11 +20,16 @@ public class grid : Node2D
 	[Export] private int y_offset;
 	[Export] private Vector2[] empty_spaces;
 	[Export] private Vector2[] ice_spaces;
+	[Export] private Vector2[] lock_spaces;
 
 	[Signal]
 	delegate void damage_ice(Vector2 boardPosition);
 	[Signal]
 	delegate void make_ice(Vector2 boardPosition);
+	[Signal]
+	delegate void damage_lock(Vector2 boardPosition);
+	[Signal]
+	delegate void make_lock(Vector2 boardPosition);
 
 	private PackedScene[] possible_pieces = new PackedScene[]
 	{
@@ -54,11 +60,19 @@ public class grid : Node2D
 		all_pieces = new Piece[width, height];
 		spawnPieces();
 		spawnIce();
+		spawnLock();
 	}
 	private void spawnIce()
     {
 		for (int i = 0; i < ice_spaces.Length; i++)
 			EmitSignal("make_ice", ice_spaces[i]);
+
+	}
+
+	private void spawnLock()
+	{
+		for (int i = 0; i < lock_spaces.Length; i++)
+			EmitSignal("make_lock", lock_spaces[i]);
 
 	}
 
@@ -149,7 +163,14 @@ public class grid : Node2D
        
 		return false;
     }
-	
+	private bool restrictedMove(Vector2 place)
+	{
+		if (isInArray(lock_spaces, place))
+			return true;
+
+		return false;
+	}
+
 
 	private bool isInArray(Vector2[] array,Vector2 item)
     {
@@ -174,15 +195,19 @@ public class grid : Node2D
 		var otherPiece = all_pieces[coll + (int)direction.x, row + (int)direction.y];
 		if (firstPiece !=null && otherPiece!=null)
 		{
-			storeInfo(firstPiece, otherPiece, new Vector2(coll, row), direction);
-			state = GameStates.WAIT;
+			if (!restrictedMove(new Vector2(coll,row)) && !restrictedMove(new Vector2(coll, row)+direction))
+            {
+				storeInfo(firstPiece, otherPiece, new Vector2(coll, row), direction);
+				state = GameStates.WAIT;
 
-			all_pieces[coll, row] = otherPiece;
-			all_pieces[coll + (int)direction.x, row + (int)direction.y] = firstPiece;
-			firstPiece.move(gridToPixel(coll + (int)direction.x, row + (int)direction.y));
-			otherPiece.move(gridToPixel(coll, row));
-			if (!move_checked)
-			 findmatches();
+				all_pieces[coll, row] = otherPiece;
+				all_pieces[coll + (int)direction.x, row + (int)direction.y] = firstPiece;
+				firstPiece.move(gridToPixel(coll + (int)direction.x, row + (int)direction.y));
+				otherPiece.move(gridToPixel(coll, row));
+				if (!move_checked)
+					findmatches();
+			}
+			
 		}
 		
 	}
@@ -297,7 +322,8 @@ public class grid : Node2D
 				{
 					if (all_pieces[i, j].matched)
 					{
-						EmitSignal("damage_ice", new Vector2(i, j));
+						
+						damageSpecial(i, j);
 						was_mached = true;
 						all_pieces[i, j].QueueFree();
 						all_pieces[i, j] = null;
@@ -311,6 +337,11 @@ public class grid : Node2D
 		else
 			swapBack();
 
+	}
+	private void damageSpecial(int column, int row)
+    {
+		EmitSignal("damage_ice", new Vector2(column, row));
+		EmitSignal("damage_lock", new Vector2(column, row));
 	}
 
 	public void collapseColumn()
@@ -373,7 +404,19 @@ public class grid : Node2D
 		afterRefillColumns();
 	}
 
-	public void afterRefillColumns()
+	private void _on_lock_holder_remove_lock(Vector2 boardPosition)
+	{
+		var lockList = new List<Vector2>(lock_spaces);
+		foreach (int i in GD.Range(lockList.Count-1 ,-1,-1))
+        {
+			if (lock_spaces[i] == boardPosition)
+				lockList.RemoveAt(i);
+        }
+
+		lock_spaces = lockList.ToArray();
+	}
+
+		public void afterRefillColumns()
 	{
 		for (int i = 0; i < width; i++)
 			for (int j = 0; j < height; j++)

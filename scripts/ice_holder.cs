@@ -10,7 +10,7 @@ public class ice_holder : Node2D
 
     public override void _Ready()
     {
-        ice_pieces = new ice[width, height];
+        
     }
 
     //  // Called every frame. 'delta' is the elapsed time since the previous frame.
@@ -20,9 +20,10 @@ public class ice_holder : Node2D
     //  }
     private void _on_grid_damage_ice(Vector2 boardPosition)
     {
+      
         if (ice_pieces[(int)boardPosition.x, (int)boardPosition.y] != null)
         {
-            ice_pieces[(int)boardPosition.x, (int)boardPosition.y].takeDamage(1);
+            ice_pieces[(int)boardPosition.x, (int)boardPosition.y].takeDamage(1);           
             if (ice_pieces[(int)boardPosition.x, (int)boardPosition.y].health <= 0)
             {
                 ice_pieces[(int)boardPosition.x, (int)boardPosition.y].QueueFree();
@@ -39,8 +40,7 @@ public class ice_holder : Node2D
         var current = (ice)ice.Instance();      
 
         AddChild(current);
-        current.Position = new Vector2(boardPosition.x * 64 + 64, -boardPosition.y * 64 + 800);
-        GD.Print(current.Position.x, current.Position.y);
+        current.Position = new Vector2(boardPosition.x * 64 + 64, -boardPosition.y * 64 + 800);        
         ice_pieces[(int)boardPosition.x, (int)boardPosition.y] = current;
 
     }
