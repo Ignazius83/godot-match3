@@ -21,6 +21,7 @@ public class grid : Node2D
 	[Export] private Vector2[] empty_spaces;
 	[Export] private Vector2[] ice_spaces;
 	[Export] private Vector2[] lock_spaces;
+	[Export] private Vector2[] concrete_spaces;
 
 	[Signal]
 	delegate void damage_ice(Vector2 boardPosition);
@@ -30,6 +31,10 @@ public class grid : Node2D
 	delegate void damage_lock(Vector2 boardPosition);
 	[Signal]
 	delegate void make_lock(Vector2 boardPosition);
+	[Signal]
+	delegate void damage_concrete(Vector2 boardPosition);
+	[Signal]
+	delegate void make_concrete(Vector2 boardPosition);
 
 	private PackedScene[] possible_pieces = new PackedScene[]
 	{
@@ -61,6 +66,7 @@ public class grid : Node2D
 		spawnPieces();
 		spawnIce();
 		spawnLock();
+		spawnConcrete();
 	}
 	private void spawnIce()
     {
@@ -73,6 +79,13 @@ public class grid : Node2D
 	{
 		for (int i = 0; i < lock_spaces.Length; i++)
 			EmitSignal("make_lock", lock_spaces[i]);
+
+	}
+
+	private void spawnConcrete()
+	{
+		for (int i = 0; i < concrete_spaces.Length; i++)
+			EmitSignal("make_concrete", concrete_spaces[i]);
 
 	}
 
@@ -160,9 +173,23 @@ public class grid : Node2D
     {
 		if (isInArray(empty_spaces,place))
 			return true;
+		if (isInArray(concrete_spaces, place))
+			return true;
        
 		return false;
     }
+
+	private void check_concrete(int column, int row)
+    {
+		if (column < width - 1)
+			EmitSignal("damage_concrete", new Vector2(column + 1, row));
+		if (column > 0)
+			EmitSignal("damage_concrete", new Vector2(column - 1, row));
+		if (row < height - 1)
+			EmitSignal("damage_concrete", new Vector2(column, row+1));
+		if (row > 0)
+			EmitSignal("damage_concrete", new Vector2(column, row-1));
+	}
 	private bool restrictedMove(Vector2 place)
 	{
 		if (isInArray(lock_spaces, place))
@@ -170,8 +197,7 @@ public class grid : Node2D
 
 		return false;
 	}
-
-
+	
 	private bool isInArray(Vector2[] array,Vector2 item)
     {
 		for (int i = 0; i < array.Length; i++)
@@ -342,6 +368,7 @@ public class grid : Node2D
     {
 		EmitSignal("damage_ice", new Vector2(column, row));
 		EmitSignal("damage_lock", new Vector2(column, row));
+		check_concrete(column, row);
 	}
 
 	public void collapseColumn()
@@ -407,16 +434,28 @@ public class grid : Node2D
 	private void _on_lock_holder_remove_lock(Vector2 boardPosition)
 	{
 		var lockList = new List<Vector2>(lock_spaces);
-		foreach (int i in GD.Range(lockList.Count-1 ,-1,-1))
-        {
-			if (lock_spaces[i] == boardPosition)
+		foreach (int i in GD.Range(lockList.Count - 1, -1, -1))
+		{
+			if (lockList[i] == boardPosition)
 				lockList.RemoveAt(i);
-        }
+		}
 
 		lock_spaces = lockList.ToArray();
+			
+	}
+	private void _on_concrete_holder_remove_concrete(Vector2 boardPosition)
+	{
+		var lockList = new List<Vector2>(concrete_spaces);
+		foreach (int i in GD.Range(lockList.Count - 1, -1, -1))
+		{
+			if (lockList[i] == boardPosition)
+				lockList.RemoveAt(i);
+		}
+
+		concrete_spaces = lockList.ToArray();		
 	}
 
-		public void afterRefillColumns()
+	public void afterRefillColumns()
 	{
 		for (int i = 0; i < width; i++)
 			for (int j = 0; j < height; j++)
