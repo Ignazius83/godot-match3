@@ -1,6 +1,7 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 enum GameStates {
 	WAIT,
@@ -22,6 +23,7 @@ public class grid : Node2D
 	[Export] private Vector2[] ice_spaces;
 	[Export] private Vector2[] lock_spaces;
 	[Export] private Vector2[] concrete_spaces;
+	[Export] private Vector2[] slime_spaces;
 
 	[Signal]
 	delegate void damage_ice(Vector2 boardPosition);
@@ -35,6 +37,10 @@ public class grid : Node2D
 	delegate void damage_concrete(Vector2 boardPosition);
 	[Signal]
 	delegate void make_concrete(Vector2 boardPosition);
+	[Signal]
+	delegate void damage_slime(Vector2 boardPosition);
+	[Signal]
+	delegate void make_slime(Vector2 boardPosition);
 
 	private PackedScene[] possible_pieces = new PackedScene[]
 	{
@@ -56,6 +62,8 @@ public class grid : Node2D
 	private Vector2 firstTouch = new Vector2(0, 0);
 	private Vector2 finalTouch = new Vector2(0, 0);
 	private bool controlling = false;
+
+	private bool damageSlime = false;
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
@@ -67,6 +75,7 @@ public class grid : Node2D
 		spawnIce();
 		spawnLock();
 		spawnConcrete();
+		spawnSlime();
 	}
 	private void spawnIce()
     {
@@ -86,6 +95,13 @@ public class grid : Node2D
 	{
 		for (int i = 0; i < concrete_spaces.Length; i++)
 			EmitSignal("make_concrete", concrete_spaces[i]);
+
+	}
+
+	private void spawnSlime()
+	{
+		for (int i = 0; i < slime_spaces.Length; i++)
+			EmitSignal("make_slime", slime_spaces[i]);
 
 	}
 
@@ -175,7 +191,8 @@ public class grid : Node2D
 			return true;
 		if (isInArray(concrete_spaces, place))
 			return true;
-       
+		if (isInArray(slime_spaces, place))
+			return true;
 		return false;
     }
 
@@ -189,6 +206,18 @@ public class grid : Node2D
 			EmitSignal("damage_concrete", new Vector2(column, row+1));
 		if (row > 0)
 			EmitSignal("damage_concrete", new Vector2(column, row-1));
+	}
+
+	private void check_slime(int column, int row)
+	{
+		if (column < width - 1)
+			EmitSignal("damage_slime", new Vector2(column + 1, row));
+		if (column > 0)
+			EmitSignal("damage_slime", new Vector2(column - 1, row));
+		if (row < height - 1)
+			EmitSignal("damage_slime", new Vector2(column, row + 1));
+		if (row > 0)
+			EmitSignal("damage_slime", new Vector2(column, row - 1));
 	}
 	private bool restrictedMove(Vector2 place)
 	{
@@ -369,6 +398,7 @@ public class grid : Node2D
 		EmitSignal("damage_ice", new Vector2(column, row));
 		EmitSignal("damage_lock", new Vector2(column, row));
 		check_concrete(column, row);
+		check_slime(column, row);
 	}
 
 	public void collapseColumn()
@@ -430,6 +460,19 @@ public class grid : Node2D
 			}
 		afterRefillColumns();
 	}
+	private void _on_slime_holder_remove_slime(Vector2 boardPosition)
+	{
+		damageSlime = true;
+		var lockList = new List<Vector2>(slime_spaces);
+		foreach (int i in GD.Range(lockList.Count - 1, -1, -1))
+		{
+			if (lockList[i] == boardPosition)
+				lockList.RemoveAt(i);
+		}
+
+		slime_spaces = lockList.ToArray();
+
+	}
 
 	private void _on_lock_holder_remove_lock(Vector2 boardPosition)
 	{
@@ -472,7 +515,68 @@ public class grid : Node2D
 				}
 
 			}
+		if (!damageSlime)
+			generateSlime();
+
 		state = GameStates.MOVE;
 		move_checked = false;
+		damageSlime = false;
+	}
+
+	private void generateSlime()
+    {
+		if (slime_spaces.Length>0)
+        {
+			var slime_made = false;
+			var tracker = 0;
+			while(!slime_made && tracker<100)
+            {
+				var random_num =(int)Math.Floor(GD.RandRange(0, slime_spaces.Length));
+				GD.Print(random_num);
+				int curr_x = (int)slime_spaces[random_num].x;
+				int curr_y = (int) slime_spaces[random_num].y;
+				var neighbar = findNormalNeighbar((int)curr_x, (int)curr_y);
+				GD.Print(neighbar);
+				GD.Print(slime_spaces.Length);
+				if (neighbar != null)
+				{
+					
+					all_pieces[(int)((Vector2)neighbar).x, (int)((Vector2)neighbar).y].QueueFree();
+					all_pieces[(int)((Vector2)neighbar).x, (int)((Vector2)neighbar).y] = null;
+					slime_spaces = slime_spaces.Append(new Vector2(((Vector2)neighbar).x, ((Vector2)neighbar).y)).ToArray();
+					EmitSignal("make_slime", new Vector2(((Vector2)neighbar).x, ((Vector2)neighbar).y));
+					slime_made = true;
+				}
+				tracker += 1;
+			}
+        }
+
+    }
+
+	private Vector2? findNormalNeighbar(int column, int row)
+    {
+		if (isInGrid(new Vector2(column + 1, row)))
+		{
+			if (all_pieces[column + 1, row] != null)
+				return new Vector2(column + 1, row);
+		}
+		if (isInGrid(new Vector2(column - 1, row)))
+		{
+			if (all_pieces[column - 1, row] != null)
+				return new Vector2(column - 1, row);
+		}
+		if (isInGrid(new Vector2(column, row + 1)))
+		{
+			if (all_pieces[column, row + 1] != null)
+				return new Vector2(column, row + 1);
+		}
+		if (isInGrid(new Vector2(column, row - 1)))
+		{
+			if (all_pieces[column, row - 1] != null)
+				return new Vector2(column, row - 1);
+		}
+
+		return null;
+
 	}
 }
