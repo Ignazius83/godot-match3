@@ -337,6 +337,7 @@ public class grid : Node2D
 
 				}
 			}
+		getBombPieces();
 		(GetParent().GetNode("destroy_timer") as Timer).Start();
 	}
 
@@ -409,6 +410,75 @@ public class grid : Node2D
 			if (col_matched == 5 || row_matched == 5)
 				GD.Print("color bomb");
 
+		}
+	}
+
+	private void matchAllInColumn(int column)
+	{
+		for (int i = 0; i < height; i++)
+		{
+			if (all_pieces[column, i] != null)
+            {
+				if (all_pieces[column, i].isRowBomb)
+					matchAllInRow(i);
+				if (all_pieces[column, i].isAdjacentBomb)
+					findAdjacentPieces(column,i);
+				all_pieces[column, i].matched = true;
+			}				
+				
+		}
+	}
+
+	private void getBombPieces()
+	{
+		for (int i = 0; i < width; i++)
+			for (int j = 0; j < height; j++)
+			{
+				if (all_pieces[i, j] != null)
+					if (all_pieces[i, j].matched)
+                    {
+						if (all_pieces[i, j].isColBomb)
+							matchAllInColumn(i);
+						else if (all_pieces[i, j].isRowBomb)
+							matchAllInRow(j);
+						else if (all_pieces[i, j].isAdjacentBomb)
+							findAdjacentPieces(i, j);
+					}
+			}
+	}
+
+	private void  findAdjacentPieces(int column, int row)
+    {
+		foreach (int i in GD.Range(-1, 2))
+			foreach (int j in GD.Range(-1, 2))
+			{
+				if (isInGrid(new Vector2(column + i, row + j)))
+					if (all_pieces[column + i, row + j] != null)
+					{
+						if (all_pieces[column+i, row+j].isRowBomb)
+							matchAllInRow(row + j);
+						if (all_pieces[column + i, row + j].isColBomb)
+							matchAllInColumn(column + i);						
+
+						all_pieces[column + i, row + j].matched = true;
+					}
+
+			}
+    }
+
+	private void matchAllInRow(int row)
+	{
+		for (int i = 0; i < width; i++)
+		{
+			if (all_pieces[i, row] != null)
+            {
+				if (all_pieces[i, row].isColBomb)
+					matchAllInColumn(i);
+				if (all_pieces[i,row].isAdjacentBomb)
+					findAdjacentPieces(i, row);
+				all_pieces[i, row].matched = true;
+			}
+				
 		}
 	}
 
