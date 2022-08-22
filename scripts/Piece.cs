@@ -4,17 +4,46 @@ using static Godot.Tween;
 public class Piece : Node2D
 {   
 	[Export] public string color;
+	[Export] private Texture rowTexture;
+	[Export] private Texture colTexture;
+	[Export] private Texture adjacentTexture;
+
+	public bool isRowBomb { get; set; } = false;
+	public bool isColBomb { get; set; } = false;
+	public bool isAdjacentBomb { get; set; } = false;
+
 	private Tween  moveTween;
+	private Sprite sprite;
 	public bool matched = false;
 	public override void _Ready()
 	{
 		moveTween = GetNode("moveTween") as Tween;
+		sprite = GetNode("Sprite") as Sprite;
 	}
 	
 	public void move(Vector2 target)
 	{
 		moveTween.InterpolateProperty(this, "position", Position, target, .3f, TransitionType.Elastic, EaseType.Out);
 		moveTween.Start();
+	}
+
+	public void makeColumnBomb()
+    {
+		isColBomb = true;
+		sprite.Texture = colTexture;
+		sprite.Modulate = new Color(1, 1, 1);
+    }
+	public void makeRowBomb()
+	{
+		isRowBomb = true;
+		sprite.Texture = rowTexture;
+		sprite.Modulate = new Color(1, 1, 1);
+	}
+	public void makeAdjacentBomb()
+	{
+		isAdjacentBomb = true;
+		sprite.Texture = adjacentTexture;
+		sprite.Modulate = new Color(1, 1, 1);
 	}
 
 	public void dim()

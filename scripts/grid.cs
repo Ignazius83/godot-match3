@@ -53,6 +53,7 @@ public class grid : Node2D
 
 	};
 	private Piece[,] all_pieces;
+	private Vector2[] current_matches = new Vector2[] { };
 	private Piece pieceOne;
 	private Piece pieceTwo;
 	private bool move_checked = false;
@@ -306,8 +307,11 @@ public class grid : Node2D
 							{
 								matchAndDim(all_pieces[i - 1, j]);
 								matchAndDim(all_pieces[i + 1, j]);
-								matchAndDim(all_pieces[i, j]);							
+								matchAndDim(all_pieces[i, j]);
 
+								addToArray(new Vector2(i, j), ref current_matches);
+								addToArray(new Vector2(i+1, j),ref current_matches);
+								addToArray(new Vector2(i-1, j),ref current_matches);
 							}
 						}
 					}
@@ -320,7 +324,11 @@ public class grid : Node2D
 							{
 								matchAndDim(all_pieces[i, j-1]);
 								matchAndDim(all_pieces[i, j+1]);
-								matchAndDim(all_pieces[i, j]);								
+								matchAndDim(all_pieces[i, j]);
+
+								addToArray(new Vector2(i, j), ref current_matches);
+								addToArray(new Vector2(i, j+1), ref current_matches);
+								addToArray(new Vector2(i, j-1), ref current_matches);
 
 							}
 						}
@@ -331,6 +339,12 @@ public class grid : Node2D
 			}
 		(GetParent().GetNode("destroy_timer") as Timer).Start();
 	}
+
+	private void addToArray(Vector2 value, ref Vector2[] array)
+    {
+		if (!array.Contains(value))
+			array = array.Append(value).ToArray();
+    }
 
 	private bool isPieceNull(int col, int row)
     {
@@ -366,9 +380,73 @@ public class grid : Node2D
 
 	}
 
+	private void findBombs()
+	{
+		for (int i = 0; i < current_matches.Length; i++)
+		{
+			var current_column = current_matches[i].x;
+			var current_row =    current_matches[i].y;
+			var current_color = all_pieces[(int)current_column, (int)current_row].color;
+			var col_matched = 0;
+			var row_matched = 0;
+			for (int j = 0; j < current_matches.Length; j++)
+            {
+				var this_column = current_matches[j].x;
+				var this_row = current_matches[j].y;
+				var this_color = all_pieces[(int)this_column, (int)this_row].color;
+				if (this_column == current_column && this_color == current_color)
+					col_matched++;
+				if (this_row == current_row && this_color == current_color)
+					row_matched++;
+			}
+			if (col_matched >= 3 && row_matched >= 3)
+				makeBomb(0, current_color);
+			if (col_matched == 4)
+				makeBomb(1, current_color);
+			if (row_matched == 4)
+				makeBomb(2, current_color);
+			
+			if (col_matched == 5 || row_matched == 5)
+				GD.Print("color bomb");
+
+		}
+	}
+
+	private void makeBomb(int bombType, string color)
+	{
+		for (int i = 0; i < current_matches.Length; i++)
+		{
+			var current_column =(int)current_matches[i].x;
+			var current_row =(int) current_matches[i].y;
+			if (all_pieces[current_column, current_row] == pieceOne && pieceOne.color == color)
+			{
+				pieceOne.matched = false;
+				changeBomb(bombType, pieceOne);
+			}else
+			if (all_pieces[current_column, current_row] == pieceTwo && pieceTwo.color == color)
+            {
+				pieceTwo.matched = false;
+				changeBomb(bombType, pieceTwo);
+			}
+
+		}
+	}
+	private void changeBomb(int bombType, Piece piece)
+    {
+		switch(bombType)
+        {
+			case 0: piece.makeAdjacentBomb();
+				break;
+			case 1: piece.makeColumnBomb();
+				break;
+			case 2: piece.makeRowBomb(); 
+				break;
+		}
+    }
 
 	private void destroyMached()
 	{
+		findBombs();
 		bool was_mached = false;
 		for (int i = 0; i < width; i++)
 			for (int j = 0; j < height; j++)
@@ -391,6 +469,8 @@ public class grid : Node2D
 			(GetParent().GetNode("collapse_timer") as Timer).Start();
 		else
 			swapBack();
+
+		current_matches = new Vector2[] { };
 
 	}
 	private void damageSpecial(int column, int row)
