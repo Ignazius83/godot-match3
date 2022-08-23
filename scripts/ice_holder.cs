@@ -20,6 +20,7 @@ public class ice_holder : Node2D
     //  }
     private void _on_grid_damage_ice(Vector2 boardPosition)
     {
+        if (ice_pieces == null) return;
       
         if (ice_pieces[(int)boardPosition.x, (int)boardPosition.y] != null)
         {

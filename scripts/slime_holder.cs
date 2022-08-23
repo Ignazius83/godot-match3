@@ -23,6 +23,8 @@ public class slime_holder : Node2D
     //  }
     private void _on_grid_damage_slime(Vector2 boardPosition)
     {
+        if (slime_pieces == null) return;
+
         if (slime_pieces[(int)boardPosition.x, (int)boardPosition.y] != null)
         {
             slime_pieces[(int)boardPosition.x, (int)boardPosition.y].takeDamage(1);

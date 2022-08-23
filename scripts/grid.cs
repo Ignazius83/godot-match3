@@ -48,8 +48,8 @@ public class grid : Node2D
 		ResourceLoader.Load("res://scenes/green_piece.tscn") as PackedScene,
 		ResourceLoader.Load("res://scenes/pink_piece.tscn") as PackedScene,
 		ResourceLoader.Load("res://scenes/orange_piece.tscn") as PackedScene,
-		ResourceLoader.Load("res://scenes/light_green_piece.tscn") as PackedScene,
-		ResourceLoader.Load("res://scenes/yellow_piece.tscn") as PackedScene,
+		//ResourceLoader.Load("res://scenes/light_green_piece.tscn") as PackedScene,
+		//ResourceLoader.Load("res://scenes/yellow_piece.tscn") as PackedScene,
 
 	};
 	private Piece[,] all_pieces;
@@ -400,15 +400,28 @@ public class grid : Node2D
 				if (this_row == current_row && this_color == current_color)
 					row_matched++;
 			}
-			if (col_matched >= 3 && row_matched >= 3)
-				makeBomb(0, current_color);
-			if (col_matched == 4)
-				makeBomb(1, current_color);
-			if (row_matched == 4)
-				makeBomb(2, current_color);
-			
 			if (col_matched == 5 || row_matched == 5)
+			{
 				GD.Print("color bomb");
+				return;
+			}
+			else if (col_matched >= 3 && row_matched >= 3)
+			{
+				makeBomb(0, current_color);
+				return;
+			}
+			else if (col_matched == 4)
+			{
+				makeBomb(1, current_color);
+				return;
+			}
+			else if (row_matched == 4)
+			{
+				makeBomb(2, current_color);
+				return;
+			}
+			
+			
 
 		}
 	}

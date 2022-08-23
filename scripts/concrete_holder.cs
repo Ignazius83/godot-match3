@@ -23,6 +23,8 @@ public class concrete_holder : Node2D
     //  }
     private void _on_grid_damage_concrete(Vector2 boardPosition)
     {
+        if (concrete_pieces ==  null) return;
+
         if (concrete_pieces[(int)boardPosition.x, (int)boardPosition.y] != null)
         {
             concrete_pieces[(int)boardPosition.x, (int)boardPosition.y].takeDamage(1);

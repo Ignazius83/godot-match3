@@ -23,6 +23,8 @@ public class lock_holder : Node2D
     //  }
     private void _on_grid_damage_lock(Vector2 boardPosition)
     {
+        if (lock_pieces == null) return;
+
         if (lock_pieces[(int)boardPosition.x, (int)boardPosition.y] != null)
         {
             lock_pieces[(int)boardPosition.x, (int)boardPosition.y].takeDamage(1);         
