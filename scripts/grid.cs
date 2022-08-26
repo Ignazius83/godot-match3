@@ -42,6 +42,11 @@ public class grid : Node2D
 	[Signal]
 	delegate void make_slime(Vector2 boardPosition);
 
+	[Signal]
+	delegate void update_score(int amauntToChange);
+	[Export] private int piece_value;
+	private int streak = 1;
+
 	private PackedScene[] possible_pieces = new PackedScene[]
 	{
 		ResourceLoader.Load("res://scenes/blue_piece.tscn") as PackedScene,
@@ -253,6 +258,22 @@ public class grid : Node2D
 		{
 			if (!restrictedMove(new Vector2(coll,row)) && !restrictedMove(new Vector2(coll, row)+direction))
             {
+				if (isColorBomb(firstPiece,otherPiece))
+                {
+					if (firstPiece.color == "Color")
+					{
+						matchColor(otherPiece.color);
+						matchAndDim(firstPiece);
+						addToArray(new Vector2(coll, row), ref current_matches);
+					}
+                    else
+                    {
+						matchColor(firstPiece.color);
+						matchAndDim(otherPiece);
+						addToArray(new Vector2(coll + direction.x, row + direction.y), ref current_matches);
+					}
+						
+				}
 				storeInfo(firstPiece, otherPiece, new Vector2(coll, row), direction);
 				state = GameStates.WAIT;
 
@@ -267,6 +288,13 @@ public class grid : Node2D
 		}
 		
 	}
+
+	private bool isColorBomb(Piece pieceOne,Piece pieceTwo)
+    {
+		if (pieceOne.color == "Color" || pieceTwo.color == "Color")
+			return true;
+		return false;
+    }
 
 	private void touchDifference(Vector2 grid1, Vector2 grid2)
 	{
@@ -402,7 +430,7 @@ public class grid : Node2D
 			}
 			if (col_matched == 5 || row_matched == 5)
 			{
-				GD.Print("color bomb");
+				makeBomb(3, current_color);
 				return;
 			}
 			else if (col_matched >= 3 && row_matched >= 3)
@@ -479,6 +507,34 @@ public class grid : Node2D
 			}
     }
 
+	private void matchColor(string color)
+	{
+		for (int i = 0; i < width; i++)
+			for (int j = 0; j < height; j++)
+				if (all_pieces[i, j] != null)
+				{
+
+					if (all_pieces[i, j].color == color)
+                    {
+						matchAndDim(all_pieces[i, j]);
+						addToArray(new Vector2(i, j), ref current_matches);
+
+					}
+
+				}
+	}
+
+	private void clearBoard()
+	{
+		for (int i = 0; i < width; i++)
+			for (int j = 0; j < height; j++)
+				if (all_pieces[i, j] != null)
+				{					
+						matchAndDim(all_pieces[i, j]);
+						addToArray(new Vector2(i, j), ref current_matches);
+				}
+	}
+
 	private void matchAllInRow(int row)
 	{
 		for (int i = 0; i < width; i++)
@@ -524,6 +580,9 @@ public class grid : Node2D
 				break;
 			case 2: piece.makeRowBomb(); 
 				break;
+			case 3:
+				piece.makeColorBomb();
+				break;
 		}
     }
 
@@ -543,6 +602,7 @@ public class grid : Node2D
 						was_mached = true;
 						all_pieces[i, j].QueueFree();
 						all_pieces[i, j] = null;
+						EmitSignal("update_score", piece_value * streak);
 					}					
 						
 				}
@@ -600,6 +660,7 @@ public class grid : Node2D
 
     private void refillColumns()
     {
+		streak += 1;
 		for (int i = 0; i < width; i++)
 			for (int j = 0; j < height; j++)
 			{
@@ -682,6 +743,7 @@ public class grid : Node2D
 			generateSlime();
 
 		state = GameStates.MOVE;
+		streak = 1;
 		move_checked = false;
 		damageSlime = false;
 	}

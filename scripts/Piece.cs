@@ -7,10 +7,12 @@ public class Piece : Node2D
 	[Export] private Texture rowTexture;
 	[Export] private Texture colTexture;
 	[Export] private Texture adjacentTexture;
+	[Export] private Texture colorBombTexture;
 
 	public bool isRowBomb { get; set; } = false;
 	public bool isColBomb { get; set; } = false;
 	public bool isAdjacentBomb { get; set; } = false;
+	public bool isColorBomb { get; set; } = false;
 
 	private Tween  moveTween;
 	private Sprite sprite;
@@ -44,6 +46,14 @@ public class Piece : Node2D
 		isAdjacentBomb = true;
 		sprite.Texture = adjacentTexture;
 		sprite.Modulate = new Color(1, 1, 1);
+	}
+
+	public void makeColorBomb()
+	{
+		isColorBomb = true;
+		sprite.Texture = colorBombTexture;
+		sprite.Modulate = new Color(1, 1, 1);
+		color = "Color";
 	}
 
 	public void dim()
