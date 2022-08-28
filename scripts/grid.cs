@@ -47,6 +47,8 @@ public class grid : Node2D
 	[Export] private int piece_value;
 	private int streak = 1;
 
+	private bool color_momb_used = false;
+
 	private PackedScene[] possible_pieces = new PackedScene[]
 	{
 		ResourceLoader.Load("res://scenes/blue_piece.tscn") as PackedScene,
@@ -292,7 +294,10 @@ public class grid : Node2D
 	private bool isColorBomb(Piece pieceOne,Piece pieceTwo)
     {
 		if (pieceOne.color == "Color" || pieceTwo.color == "Color")
+		{
+			color_momb_used = true;
 			return true;
+		}
 		return false;
     }
 
@@ -746,6 +751,7 @@ public class grid : Node2D
 		streak = 1;
 		move_checked = false;
 		damageSlime = false;
+		color_momb_used = false;
 	}
 
 	private void generateSlime()
