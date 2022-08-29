@@ -49,6 +49,8 @@ public class grid : Node2D
 
 	private bool color_momb_used = false;
 
+	private PackedScene particleEffect = ResourceLoader.Load("res://scenes/ParticleEffect.tscn") as PackedScene;
+
 	private PackedScene[] possible_pieces = new PackedScene[]
 	{
 		ResourceLoader.Load("res://scenes/blue_piece.tscn") as PackedScene,
@@ -607,6 +609,7 @@ public class grid : Node2D
 						was_mached = true;
 						all_pieces[i, j].QueueFree();
 						all_pieces[i, j] = null;
+						makeEffect(particleEffect, i, j);
 						EmitSignal("update_score", piece_value * streak);
 					}					
 						
@@ -620,6 +623,13 @@ public class grid : Node2D
 
 		current_matches = new Vector2[] { };
 
+	}
+
+	private void makeEffect(PackedScene effect, int column, int row)
+    {
+		var current = effect.Instance() as Node2D;
+		current.Position = gridToPixel(column, row);
+		AddChild(current);
 	}
 	private void damageSpecial(int column, int row)
     {
