@@ -50,7 +50,7 @@ public class grid : Node2D
 	private bool color_momb_used = false;
 
 	private PackedScene particleEffect = ResourceLoader.Load("res://scenes/ParticleEffect.tscn") as PackedScene;
-
+	private PackedScene animatedEffect = ResourceLoader.Load("res://scenes/AnimateExplosion.tscn") as PackedScene;
 	private PackedScene[] possible_pieces = new PackedScene[]
 	{
 		ResourceLoader.Load("res://scenes/blue_piece.tscn") as PackedScene,
@@ -610,6 +610,7 @@ public class grid : Node2D
 						all_pieces[i, j].QueueFree();
 						all_pieces[i, j] = null;
 						makeEffect(particleEffect, i, j);
+						makeEffect(animatedEffect, i, j);
 						EmitSignal("update_score", piece_value * streak);
 					}					
 						
