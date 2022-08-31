@@ -47,6 +47,14 @@ public class grid : Node2D
 	[Export] private int piece_value;
 	private int streak = 1;
 
+	[Signal]
+	delegate void update_counter(int amauntToChange);
+	[Export] private int current_counter_value;
+	[Export] private bool is_moves;
+
+	[Signal]
+	delegate void game_over();
+
 	private bool color_momb_used = false;
 
 	private PackedScene particleEffect = ResourceLoader.Load("res://scenes/ParticleEffect.tscn") as PackedScene;
@@ -86,6 +94,10 @@ public class grid : Node2D
 		spawnLock();
 		spawnConcrete();
 		spawnSlime();
+		EmitSignal("update_counter", current_counter_value);
+
+		if (!is_moves)
+			(GetNode("Timer") as Timer).Start();
 	}
 	private void spawnIce()
     {
@@ -763,6 +775,13 @@ public class grid : Node2D
 		move_checked = false;
 		damageSlime = false;
 		color_momb_used = false;
+		if (is_moves)
+        {
+			current_counter_value -= 1;
+			EmitSignal("update_counter", -1);
+			if (current_counter_value == 0)
+				declareGameOver();
+        }
 	}
 
 	private void generateSlime()
@@ -821,4 +840,21 @@ public class grid : Node2D
 		return null;
 
 	}
+
+   private void _on_Timer_timeout()
+   {
+		current_counter_value -= 1;
+		EmitSignal("update_counter",-1);
+		if (current_counter_value == 0)
+		{
+			declareGameOver();
+			GetNode<Timer>("Timer").Stop();
+		}
+   }
+
+   private void declareGameOver()
+   {
+		EmitSignal("game_over");
+		state = GameStates.WAIT;
+   }
 }
