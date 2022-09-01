@@ -57,8 +57,16 @@ public class grid : Node2D
 
 	private bool color_momb_used = false;
 
+
+	// Collectible/Sikers
+	[Export] private PackedScene sinkerPiece;
+	[Export] private bool  sinkerInScene;
+	[Export] private int maxSinkers;
+	private int currentSinkers = 0;
+	// Effects
 	private PackedScene particleEffect = ResourceLoader.Load("res://scenes/ParticleEffect.tscn") as PackedScene;
 	private PackedScene animatedEffect = ResourceLoader.Load("res://scenes/AnimateExplosion.tscn") as PackedScene;
+	
 	private PackedScene[] possible_pieces = new PackedScene[]
 	{
 		ResourceLoader.Load("res://scenes/blue_piece.tscn") as PackedScene,
@@ -89,6 +97,8 @@ public class grid : Node2D
 
 		GD.Randomize();
 		all_pieces = new Piece[width, height];
+		if (sinkerInScene)
+			spawnSinker(maxSinkers);
 		spawnPieces();
 		spawnIce();
 		spawnLock();
@@ -132,7 +142,7 @@ public class grid : Node2D
 		for (int i = 0; i < width; i++)
 			for (int j = 0; j < height; j++)
 			{
-				if (!restrictedFill(new Vector2(i, j)))
+				if (!restrictedFill(new Vector2(i, j)) && all_pieces[i,j] == null)
 				{
 					var rand = (int)Math.Floor(GD.RandRange(0, possible_pieces.Length));
 					var piece = (Piece)possible_pieces[rand].Instance();
@@ -150,6 +160,32 @@ public class grid : Node2D
 				}
 			}
 	}
+
+	private bool isPieceSinker(int column, int row)
+    {
+		if (all_pieces[column, row] != null)
+			if (all_pieces[column, row].color == "None")
+				return true;
+		return false;
+    }
+
+	private void spawnSinker(int number_to_spawn)
+    {
+       for (int i=0; i< number_to_spawn; i++)
+        {
+			var column = (int)Math.Floor(GD.RandRange(0, width));
+			while(all_pieces[column,height-1]!=null || restrictedFill(new Vector2(column, height - 1)))
+		    {
+			  column = (int)Math.Floor(GD.RandRange(0, width));
+		    }
+
+			var current = sinkerPiece.Instance<Piece>();
+			AddChild(current);
+			current.Position = gridToPixel(column, height - 1);
+			all_pieces[column, height - 1] = current;
+			currentSinkers += 1;
+        }
+    }
 
 	private Vector2 gridToPixel(int coll, int row)
 	{
@@ -342,7 +378,7 @@ public class grid : Node2D
 		for (int i = 0; i < width; i++)
 			for (int j = 0; j < height; j++)
 			{
-				if (all_pieces[i, j] != null)
+				if (all_pieces[i, j] != null && !isPieceSinker(i,j))
 				{
 					var currentColor = all_pieces[i, j].color;
 					if (i > 0 && i < width - 1)
@@ -477,7 +513,7 @@ public class grid : Node2D
 	{
 		for (int i = 0; i < height; i++)
 		{
-			if (all_pieces[column, i] != null)
+			if (all_pieces[column, i] != null && !isPieceSinker(column, i))
             {
 				if (all_pieces[column, i].isRowBomb)
 					matchAllInRow(i);
@@ -513,7 +549,7 @@ public class grid : Node2D
 			foreach (int j in GD.Range(-1, 2))
 			{
 				if (isInGrid(new Vector2(column + i, row + j)))
-					if (all_pieces[column + i, row + j] != null)
+					if (all_pieces[column + i, row + j] != null && !isPieceSinker(column + i, row + j))
 					{
 						if (all_pieces[column+i, row+j].isRowBomb)
 							matchAllInRow(row + j);
@@ -530,7 +566,7 @@ public class grid : Node2D
 	{
 		for (int i = 0; i < width; i++)
 			for (int j = 0; j < height; j++)
-				if (all_pieces[i, j] != null)
+				if (all_pieces[i, j] != null && !isPieceSinker(i,j))
 				{
 
 					if (all_pieces[i, j].color == color)
@@ -547,7 +583,7 @@ public class grid : Node2D
 	{
 		for (int i = 0; i < width; i++)
 			for (int j = 0; j < height; j++)
-				if (all_pieces[i, j] != null)
+				if (all_pieces[i, j] != null && !isPieceSinker(i, j))
 				{					
 						matchAndDim(all_pieces[i, j]);
 						addToArray(new Vector2(i, j), ref current_matches);
@@ -558,7 +594,7 @@ public class grid : Node2D
 	{
 		for (int i = 0; i < width; i++)
 		{
-			if (all_pieces[i, row] != null)
+			if (all_pieces[i, row] != null && !isPieceSinker(i, row))
             {
 				if (all_pieces[i, row].isColBomb)
 					matchAllInColumn(i);
@@ -667,9 +703,25 @@ public class grid : Node2D
 							break;
 						}
 			}
+		destroySinkers();
 		(GetParent().GetNode("refill_timer") as Timer).Start();
 	}
 
+	private void destroySinkers()
+    {
+		for (int i=0; i<width; i++)
+        {
+			if (all_pieces[i, 0] != null)
+				if (all_pieces[i, 0].color == "None")
+				{
+					all_pieces[i, 0].matched = true;
+					currentSinkers -= 1;
+				}
+					
+
+
+		}
+    }
 
 	private void _on_destroy_timer_timeout()
 	{
@@ -818,22 +870,22 @@ public class grid : Node2D
     {
 		if (isInGrid(new Vector2(column + 1, row)))
 		{
-			if (all_pieces[column + 1, row] != null)
+			if (all_pieces[column + 1, row] != null && !isPieceSinker(column+1, row))
 				return new Vector2(column + 1, row);
 		}
 		if (isInGrid(new Vector2(column - 1, row)))
 		{
-			if (all_pieces[column - 1, row] != null)
+			if (all_pieces[column - 1, row] != null && !isPieceSinker(column-1, row))
 				return new Vector2(column - 1, row);
 		}
 		if (isInGrid(new Vector2(column, row + 1)))
 		{
-			if (all_pieces[column, row + 1] != null)
+			if (all_pieces[column, row + 1] != null && !isPieceSinker(column, row+1))
 				return new Vector2(column, row + 1);
 		}
 		if (isInGrid(new Vector2(column, row - 1)))
 		{
-			if (all_pieces[column, row - 1] != null)
+			if (all_pieces[column, row - 1] != null && !isPieceSinker(column, row-1))
 				return new Vector2(column, row - 1);
 		}
 
