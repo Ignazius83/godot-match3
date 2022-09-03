@@ -7,7 +7,9 @@ public class ice_holder : Node2D
     private int width = 8;
     private int height = 10;
     private PackedScene ice = ResourceLoader.Load("res://scenes/ice.tscn") as PackedScene;
-
+    
+    [Signal] delegate void break_ice(string goal_type);
+    [Export] string value;
     public override void _Ready()
     {
         
@@ -29,6 +31,7 @@ public class ice_holder : Node2D
             {
                 ice_pieces[(int)boardPosition.x, (int)boardPosition.y].QueueFree();
                 ice_pieces[(int)boardPosition.x, (int)boardPosition.y] = null;
+                EmitSignal("break_ice", value);
             }
                 
         }

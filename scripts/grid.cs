@@ -44,6 +44,9 @@ public class grid : Node2D
 
 	[Signal]
 	delegate void update_score(int amauntToChange);
+	[Signal]
+	delegate void setup_max_score(int maxScore);
+	[Export] private int max_score;
 	[Export] private int piece_value;
 	private int streak = 1;
 
@@ -54,6 +57,9 @@ public class grid : Node2D
 
 	[Signal]
 	delegate void game_over();
+
+	[Signal]
+	delegate void check_goal(string goal_type);
 
 	private bool color_momb_used = false;
 
@@ -105,6 +111,7 @@ public class grid : Node2D
 		spawnConcrete();
 		spawnSlime();
 		EmitSignal("update_counter", current_counter_value);
+		EmitSignal("setup_max_score", max_score);
 
 		if (!is_moves)
 			(GetNode("Timer") as Timer).Start();
@@ -652,7 +659,7 @@ public class grid : Node2D
 				{
 					if (all_pieces[i, j].matched)
 					{
-						
+						EmitSignal("check_goal", all_pieces[i, j].color);
 						damageSpecial(i, j);
 						was_mached = true;
 						all_pieces[i, j].QueueFree();
@@ -909,4 +916,9 @@ public class grid : Node2D
 		EmitSignal("game_over");
 		state = GameStates.WAIT;
    }
+
+	private void _on_goal_holder_game_won()
+    {
+		state = GameStates.WAIT;
+    }
 }
