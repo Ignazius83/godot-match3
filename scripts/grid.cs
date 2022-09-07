@@ -24,6 +24,7 @@ public class grid : Node2D
 	[Export] private Vector2[] lock_spaces;
 	[Export] private Vector2[] concrete_spaces;
 	[Export] private Vector2[] slime_spaces;
+	[Export] private Vector3[] preset_spaces;
 
 	[Signal]
 	delegate void damage_ice(Vector2 boardPosition);
@@ -103,6 +104,7 @@ public class grid : Node2D
 
 		GD.Randomize();
 		all_pieces = new Piece[width, height];
+		spawnPresets();
 		if (sinkerInScene)
 			spawnSinker(maxSinkers);
 		spawnPieces();
@@ -176,6 +178,20 @@ public class grid : Node2D
 		return false;
     }
 
+	private void spawnPresets()
+    {
+		if (preset_spaces == null) return;
+
+		for (int i = 0; i < preset_spaces.Length; i++)
+        {
+			var piece = possible_pieces[(int)preset_spaces[i].z].Instance<Piece>();
+			AddChild(piece);
+			piece.Position = gridToPixel((int)preset_spaces[i].x, (int)preset_spaces[i].y);
+			all_pieces[(int)preset_spaces[i].x, (int)preset_spaces[i].y] = piece;
+		}
+
+	}
+	
 	private void spawnSinker(int number_to_spawn)
     {
        for (int i=0; i< number_to_spawn; i++)
@@ -318,24 +334,30 @@ public class grid : Node2D
 			if (!restrictedMove(new Vector2(coll,row)) && !restrictedMove(new Vector2(coll, row)+direction))
             {
 				if (isColorBomb(firstPiece,otherPiece))
-                {
+                {				
+
 					if (isPieceSinker(coll, row) || isPieceSinker(coll + (int)direction.x, row + (int)direction.y))
                     {
 						swapBack();
 						return;
 					}
-						
-					if (firstPiece.color == "Color")
+
+					if (firstPiece.color == "Color" && otherPiece.color == "Color")
+						clearBoard();
+					else
 					{
-						matchColor(otherPiece.color);
-						matchAndDim(firstPiece);
-						addToArray(new Vector2(coll, row), ref current_matches);
-					}
-                    else
-                    {
-						matchColor(firstPiece.color);
-						matchAndDim(otherPiece);
-						addToArray(new Vector2(coll + direction.x, row + direction.y), ref current_matches);
+						if (firstPiece.color == "Color")
+						{
+							matchColor(otherPiece.color);
+							matchAndDim(firstPiece);
+							addToArray(new Vector2(coll, row), ref current_matches);
+						}
+						else
+						{
+							matchColor(firstPiece.color);
+							matchAndDim(otherPiece);
+							addToArray(new Vector2(coll + direction.x, row + direction.y), ref current_matches);
+						}
 					}
 						
 				}
