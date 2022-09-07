@@ -319,6 +319,12 @@ public class grid : Node2D
             {
 				if (isColorBomb(firstPiece,otherPiece))
                 {
+					if (isPieceSinker(coll, row) || isPieceSinker(coll + (int)direction.x, row + (int)direction.y))
+                    {
+						swapBack();
+						return;
+					}
+						
 					if (firstPiece.color == "Color")
 					{
 						matchColor(otherPiece.color);
@@ -472,7 +478,9 @@ public class grid : Node2D
 	}
 
 	private void findBombs()
-	{
+	{ 
+		if (color_momb_used) return;
+		
 		for (int i = 0; i < current_matches.Length; i++)
 		{
 			var current_column = current_matches[i].x;
@@ -493,22 +501,22 @@ public class grid : Node2D
 			if (col_matched == 5 || row_matched == 5)
 			{
 				makeBomb(3, current_color);
-				return;
+				continue;
 			}
 			else if (col_matched >= 3 && row_matched >= 3)
 			{
 				makeBomb(0, current_color);
-				return;
+				continue;
 			}
 			else if (col_matched == 4)
 			{
 				makeBomb(1, current_color);
-				return;
+				continue;
 			}
 			else if (row_matched == 4)
 			{
 				makeBomb(2, current_color);
-				return;
+				continue;
 			}
 			
 			
@@ -526,6 +534,9 @@ public class grid : Node2D
 					matchAllInRow(i);
 				if (all_pieces[column, i].isAdjacentBomb)
 					findAdjacentPieces(column,i);
+				if (all_pieces[column, i].isColorBomb)
+					matchColor(all_pieces[column, i].color);
+
 				all_pieces[column, i].matched = true;
 			}				
 				
@@ -561,7 +572,9 @@ public class grid : Node2D
 						if (all_pieces[column+i, row+j].isRowBomb)
 							matchAllInRow(row + j);
 						if (all_pieces[column + i, row + j].isColBomb)
-							matchAllInColumn(column + i);						
+							matchAllInColumn(column + i);
+						if (all_pieces[column+i, row+j].isColorBomb)
+							matchColor(all_pieces[column+i, row+j].color);
 
 						all_pieces[column + i, row + j].matched = true;
 					}
@@ -578,6 +591,13 @@ public class grid : Node2D
 
 					if (all_pieces[i, j].color == color)
                     {
+						if (all_pieces[i, j].isColBomb)                       
+							matchAllInColumn(i);
+						if (all_pieces[i, j].isRowBomb)
+							matchAllInRow(j);
+						if (all_pieces[i, j].isAdjacentBomb)
+							findAdjacentPieces(i,j);
+
 						matchAndDim(all_pieces[i, j]);
 						addToArray(new Vector2(i, j), ref current_matches);
 
@@ -607,6 +627,9 @@ public class grid : Node2D
 					matchAllInColumn(i);
 				if (all_pieces[i,row].isAdjacentBomb)
 					findAdjacentPieces(i, row);
+				if (all_pieces [i,row].isColorBomb)
+					matchColor(all_pieces[i, row].color);
+
 				all_pieces[i, row].matched = true;
 			}
 				
@@ -621,12 +644,16 @@ public class grid : Node2D
 			var current_row =(int) current_matches[i].y;
 			if (all_pieces[current_column, current_row] == pieceOne && pieceOne.color == color)
 			{
+				damageSpecial(current_column, current_row);
+				EmitSignal("check_goal", pieceOne.color);
 				pieceOne.matched = false;
 				changeBomb(bombType, pieceOne);
 			}else
 			if (all_pieces[current_column, current_row] == pieceTwo && pieceTwo.color == color)
             {
 				pieceTwo.matched = false;
+				damageSpecial(current_column, current_row);
+				EmitSignal("check_goal", pieceTwo.color);
 				changeBomb(bombType, pieceTwo);
 			}
 
