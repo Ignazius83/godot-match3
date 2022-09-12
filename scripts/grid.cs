@@ -25,6 +25,7 @@ public class grid : Node2D
 	[Export] private Vector2[] concrete_spaces;
 	[Export] private Vector2[] slime_spaces;
 	[Export] private Vector3[] preset_spaces;
+	
 
 	[Signal]
 	delegate void damage_ice(Vector2 boardPosition);
@@ -71,6 +72,9 @@ public class grid : Node2D
 	[Export] private int maxSinkers;
 	private int currentSinkers = 0;
 	// Effects
+	[Export] private PackedScene hintEffect;
+	private HintEffect _hint;
+	private string hintColor = "";
 	private PackedScene particleEffect = ResourceLoader.Load("res://scenes/ParticleEffect.tscn") as PackedScene;
 	private PackedScene animatedEffect = ResourceLoader.Load("res://scenes/AnimateExplosion.tscn") as PackedScene;
 	
@@ -80,11 +84,12 @@ public class grid : Node2D
 		ResourceLoader.Load("res://scenes/green_piece.tscn") as PackedScene,
 		ResourceLoader.Load("res://scenes/pink_piece.tscn") as PackedScene,
 		ResourceLoader.Load("res://scenes/orange_piece.tscn") as PackedScene,
-		//ResourceLoader.Load("res://scenes/light_green_piece.tscn") as PackedScene,
+		ResourceLoader.Load("res://scenes/light_green_piece.tscn") as PackedScene,
 		//ResourceLoader.Load("res://scenes/yellow_piece.tscn") as PackedScene,
 
 	};
 	private Piece[,] all_pieces;
+	private Piece[,] clone_array;
 	private Vector2[] current_matches = new Vector2[] { };
 	private Piece pieceOne;
 	private Piece pieceTwo;
@@ -104,6 +109,7 @@ public class grid : Node2D
 
 		GD.Randomize();
 		all_pieces = new Piece[width, height];
+		clone_array = new Piece[width, height];
 		spawnPresets();
 		if (sinkerInScene)
 			spawnSinker(maxSinkers);
@@ -118,6 +124,175 @@ public class grid : Node2D
 		if (!is_moves)
 			(GetNode("Timer") as Timer).Start();
 	}
+
+	private void _on_ShuffleTimer_timeout()
+    {
+		shuffleBoard();
+    }
+
+	private Piece[,] copyArray(Piece[,] arrayToCopy)
+	{
+		var newArray = new Piece[width, height];
+		for (int i = 0; i < width; i++)
+			for (int j = 0; j < height; j++)
+			{
+				newArray[i, j] = arrayToCopy[i, j];
+			}
+		return newArray;
+	}
+	private bool isDeadLocked()
+    {
+		clone_array = copyArray(all_pieces);
+		for (int i = 0; i < width; i++)
+			for (int j = 0; j < height; j++)
+            {
+				//right
+				if (switchAndCheck(new Vector2(i, j), new Vector2(1, 0), ref clone_array))
+					return false;
+				//up
+				if (switchAndCheck(new Vector2(i, j), new Vector2(0, 1), ref clone_array))
+					return false;
+				
+			}
+		return true;
+
+
+	}
+	private List<Piece> clearAndStoreBoard()
+    {
+		List<Piece> holder = new List<Piece>();
+		for (int i = 0; i < width; i++)
+			for (int j = 0; j < height; j++)
+			{
+				if (all_pieces[i, j] != null)
+				{
+					holder.Add(all_pieces[i, j]);
+					all_pieces[i, j] = null;
+				}
+			}
+		return holder;
+	}
+
+	private void shuffleBoard()
+    {
+		var holder = clearAndStoreBoard();
+		for (int i = 0; i < width; i++)
+			for (int j = 0; j < height; j++)
+			{
+				if (!restrictedFill(new Vector2(i, j)) && all_pieces[i, j] == null)
+				{
+					var rand = (int)Math.Floor(GD.RandRange(0, holder.Count));
+					var piece = holder[rand];
+
+					var loops = 0;
+					while (mathAt(i, j, piece.color) && loops < 100)
+					{
+						rand = (int)Math.Floor(GD.RandRange(0, holder.Count));
+						piece = holder[rand];
+						loops += 1;
+					}
+					
+					piece.move(gridToPixel(i, j));
+					all_pieces[i, j] = piece;
+					holder.RemoveAt(rand);
+				}
+			}
+		if (isDeadLocked())
+			shuffleBoard();
+		state = GameStates.MOVE;
+	}
+	private List<Piece> findAllMatches()
+    {
+		List<Piece> holder_array = new List<Piece>();
+		clone_array = copyArray(all_pieces);
+		GD.Print("hintColor="+hintColor);
+		for (int i = 0; i < width; i++)
+			for (int j = 0; j < height; j++)
+			{
+				if (!restrictedFill(new Vector2(i, j)) && clone_array[i, j] != null)
+				{
+					if (switchAndCheck(new Vector2(i, j), new Vector2(1, 0), ref clone_array) &&  isInGrid(new Vector2(i + 1, j)) && !restrictedMove(new Vector2(i + 1, j)))
+					{
+						if (hintColor != "")
+						{
+							if (hintColor == clone_array[i, j].color)
+								holder_array.Add(clone_array[i, j]);
+							else
+								holder_array.Add(clone_array[i + 1, j]);
+						}
+					}
+
+					if (switchAndCheck(new Vector2(i, j), new Vector2(0, 1), ref clone_array) && isInGrid(new Vector2(i, j+1)) && !restrictedMove(new Vector2(i, j+1)))
+					{
+						if (hintColor != "")
+						{
+							if (hintColor == clone_array[i, j].color)
+								holder_array.Add(clone_array[i, j]);
+							else
+								holder_array.Add(clone_array[i, j + 1]);
+						}
+					}
+				}
+			}
+		return holder_array;
+
+	}
+	private void _on_HintTimer_timeout()
+    {
+		generate_hint();
+    }
+
+	private void destroy_hint()
+	{
+		if (_hint !=null)
+		{
+			_hint.QueueFree();
+			_hint = null;
+		}
+	}
+	private void generate_hint()
+	{		
+		var hints = findAllMatches();
+
+		if (hints.Count > 0)
+		{
+			var rand = Math.Floor(GD.RandRange(0, hints.Count));
+			_hint = hintEffect.Instance<HintEffect>();
+			AddChild(_hint);
+			_hint.Position = hints[(int)rand].Position;
+			_hint.setup(hints[(int)rand].GetNode<Sprite>("Sprite").Texture);
+		}
+		GD.Print(hints.Count);
+		//destroy_hint()
+
+		//hint = hint_effect.instance()
+		//add_child(hint)
+		//hint.position = hints[rand].position
+		//hint.Setup(hints[rand].get_node("Sprite").texture)
+	}
+	private void switchPieces(Vector2 place, Vector2 direction, ref Piece[,] array)
+    {
+		if (isInGrid(place) && !restrictedFill(place))
+			if (isInGrid(place+direction)&& !restrictedFill(place+direction))
+		    {
+				var holder = array[(int)place.x + (int)direction.x, (int)place.y + (int)direction.y];
+				array[(int)place.x + (int)direction.x, (int)place.y + (int)direction.y] = array[(int)place.x , (int)place.y];
+				array[(int)place.x, (int)place.y] = holder;
+			}				
+    }
+	private bool switchAndCheck(Vector2 place, Vector2 direction, ref Piece[,] array)
+    {
+		switchPieces(place, direction, ref array);
+		if (existMatches(array))
+        {
+			switchPieces(place, direction, ref array);
+			return true;
+        }
+		switchPieces(place, direction, ref array);
+		return false;
+
+	}
+		
 	private void spawnIce()
     {
 		for (int i = 0; i < ice_spaces.Length; i++)
@@ -168,6 +343,11 @@ public class grid : Node2D
 					all_pieces[i, j] = piece;
 				}
 			}
+
+		if (isDeadLocked())
+			shuffleBoard();
+
+		(GetNode("HintTimer") as Timer).Start();
 	}
 
 	private bool isPieceSinker(int column, int row)
@@ -236,6 +416,7 @@ public class grid : Node2D
 			{
 				firstTouch = pixelToGrid(GetGlobalMousePosition().x, GetGlobalMousePosition().y);
 				controlling = true;
+				destroy_hint();
 			}
 
 
@@ -257,14 +438,15 @@ public class grid : Node2D
 	}
 	private void swapBack()
     {
-		if (pieceOne != null && pieceTwo != null)
-		{
+		if (pieceOne != null && pieceTwo != null)		
 			swapPieces((int)lastPlace.x, (int)lastPlace.y, lastDirection);
-			state = GameStates.MOVE;
-			move_checked = false;
-		}
+			
+		state = GameStates.MOVE;
+		move_checked = false;
+	    (GetNode("HintTimer") as Timer).Start();
 
-    }
+
+	}
 
 	private bool restrictedFill(Vector2 place)
     {
@@ -408,6 +590,49 @@ public class grid : Node2D
 		}
 	}
 
+	private bool existMatches( Piece[,] array)
+    {
+		for (int i = 0; i < width; i++)
+			for (int j = 0; j < height; j++)
+			{
+				if (array[i, j] != null)
+				{
+					var currentColor = array[i, j].color;
+					if (i > 0 && i < width - 1)
+					{
+						if (array[i - 1, j] != null && array[i + 1, j]!=null)
+						{
+							if (array[i - 1, j].color == currentColor &&
+								array[i + 1, j].color == currentColor)
+							{
+
+								hintColor = currentColor;
+								return true;
+							}
+							
+						}
+					}
+					if (j > 0 && j < height - 1)
+					{
+						if (array[i, j - 1]!=null && array[i, j + 1]!=null)
+						{
+							if (array[i, j - 1].color == currentColor &&
+								array[i, j + 1].color == currentColor)
+							{
+								hintColor = currentColor;
+								return true;
+							}
+								
+						}
+					}
+
+
+				}
+			}
+
+		return false;
+	}
+	
 	private void findmatches()
 	{
 		for (int i = 0; i < width; i++)
@@ -883,6 +1108,8 @@ public class grid : Node2D
 		move_checked = false;
 		damageSlime = false;
 		color_momb_used = false;
+		if (isDeadLocked())
+			GetNode<Timer>("ShuffleTimer").Start();
 		if (is_moves)
         {
 			current_counter_value -= 1;
@@ -890,6 +1117,9 @@ public class grid : Node2D
 			if (current_counter_value == 0)
 				declareGameOver();
         }
+
+		
+		(GetNode("HintTimer") as Timer).Start();
 	}
 
 	private void generateSlime()
