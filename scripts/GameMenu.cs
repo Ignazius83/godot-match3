@@ -28,7 +28,7 @@ public class GameMenu : Control
 
     private void _on_Main_play_pressed()
     {
-        GetTree().ChangeScene("res://scenes/Levels/level_1.tscn");
+        GetTree().ChangeScene("res://scenes/LevelSelectScene.tscn");
     }
 
 

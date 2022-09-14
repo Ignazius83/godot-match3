@@ -4,7 +4,7 @@
 [ext_resource path="res://art/Buttons/Settings Button 2.png" type="Texture" id=2]
 [ext_resource path="res://art/godot match 3 logo.png" type="Texture" id=3]
 [ext_resource path="res://scenes/BaseMenuPanel.tscn" type="PackedScene" id=4]
-[ext_resource path="res://scripts/MainMenuPanel.cs" type="Script" id=5]
+[ext_resource path="res://scenes/MainMenuPanel.cs" type="Script" id=5]
 
 [node name="Main" instance=ExtResource( 4 )]
 script = ExtResource( 5 )
