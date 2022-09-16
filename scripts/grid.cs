@@ -79,8 +79,11 @@ public class grid : Node2D
 	private PackedScene particleEffect = ResourceLoader.Load("res://scenes/ParticleEffect.tscn") as PackedScene;
 	private PackedScene animatedEffect = ResourceLoader.Load("res://scenes/AnimateExplosion.tscn") as PackedScene;
 	// sound 
-	[Signal]
-	delegate void play_sound();
+	[Signal] delegate void play_sound();
+
+	//camera
+	[Signal] delegate void place_camera(Vector2 placement);
+	[Signal] delegate void camera_effect();
 
 	private PackedScene[] possible_pieces = new PackedScene[]
 	{
@@ -112,6 +115,7 @@ public class grid : Node2D
 		state = GameStates.MOVE;
 
 		GD.Randomize();
+		moveCamera();
 		all_pieces = new Piece[width, height];
 		clone_array = new Piece[width, height];
 		spawnPresets();
@@ -129,9 +133,20 @@ public class grid : Node2D
 			(GetNode("Timer") as Timer).Start();
 	}
 
+	private void moveCamera()
+    {
+		var newPos = gridToPixel((int)(width/2 - 0.5), (int)(height/2 -0.5));
+		EmitSignal("place_camera", newPos);
+    }
+
 	private void _on_ShuffleTimer_timeout()
     {
 		shuffleBoard();
+    }
+
+	private void camEffect()
+    {
+		EmitSignal("camera_effect");
     }
 
 	private Piece[,] copyArray(Piece[,] arrayToCopy)
@@ -947,6 +962,7 @@ public class grid : Node2D
 						makeEffect(particleEffect, i, j);
 						makeEffect(animatedEffect, i, j);
 						EmitSignal("play_sound");
+						camEffect();
 						EmitSignal("update_score", piece_value * streak);
 					}					
 						
