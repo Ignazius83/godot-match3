@@ -5,7 +5,8 @@ using System.Linq;
 
 enum GameStates {
 	WAIT,
-	MOVE
+	MOVE,
+	WIN
 }
 
 
@@ -77,7 +78,10 @@ public class grid : Node2D
 	private string hintColor = "";
 	private PackedScene particleEffect = ResourceLoader.Load("res://scenes/ParticleEffect.tscn") as PackedScene;
 	private PackedScene animatedEffect = ResourceLoader.Load("res://scenes/AnimateExplosion.tscn") as PackedScene;
-	
+	// sound 
+	[Signal]
+	delegate void play_sound();
+
 	private PackedScene[] possible_pieces = new PackedScene[]
 	{
 		ResourceLoader.Load("res://scenes/blue_piece.tscn") as PackedScene,
@@ -256,6 +260,7 @@ public class grid : Node2D
 
 		if (hints.Count > 0)
 		{
+			//destroy_hint();
 			var rand = Math.Floor(GD.RandRange(0, hints.Count));
 			_hint = hintEffect.Instance<HintEffect>();
 			AddChild(_hint);
@@ -933,13 +938,15 @@ public class grid : Node2D
 				{
 					if (all_pieces[i, j].matched)
 					{
-						EmitSignal("check_goal", all_pieces[i, j].color);
+						if (state != GameStates.WIN)
+						   EmitSignal("check_goal", all_pieces[i, j].color);
 						damageSpecial(i, j);
 						was_mached = true;
 						all_pieces[i, j].QueueFree();
 						all_pieces[i, j] = null;
 						makeEffect(particleEffect, i, j);
 						makeEffect(animatedEffect, i, j);
+						EmitSignal("play_sound");
 						EmitSignal("update_score", piece_value * streak);
 					}					
 						
@@ -947,7 +954,10 @@ public class grid : Node2D
 			}
 		move_checked = true;
 		if (was_mached)
+		{
+			destroy_hint();
 			(GetParent().GetNode("collapse_timer") as Timer).Start();
+		}
 		else
 			swapBack();
 
@@ -1103,7 +1113,7 @@ public class grid : Node2D
 		if (!damageSlime)
 			generateSlime();
 
-		state = GameStates.MOVE;
+		
 		streak = 1;
 		move_checked = false;
 		damageSlime = false;
@@ -1112,11 +1122,18 @@ public class grid : Node2D
 			GetNode<Timer>("ShuffleTimer").Start();
 		if (is_moves)
         {
-			current_counter_value -= 1;
-			EmitSignal("update_counter", -1);
-			if (current_counter_value == 0)
-				declareGameOver();
-        }
+			if (state != GameStates.WIN)
+			{
+				
+				current_counter_value -= 1;
+				EmitSignal("update_counter", -1);
+				if (current_counter_value == 0)
+					declareGameOver();
+				else
+					state = GameStates.MOVE;
+			}			
+				
+		}
 
 		
 		(GetNode("HintTimer") as Timer).Start();
@@ -1185,7 +1202,8 @@ public class grid : Node2D
 		EmitSignal("update_counter",-1);
 		if (current_counter_value == 0)
 		{
-			declareGameOver();
+			if (state !=GameStates.WIN)
+			   declareGameOver();
 			GetNode<Timer>("Timer").Stop();
 		}
    }
@@ -1198,6 +1216,6 @@ public class grid : Node2D
 
 	private void _on_goal_holder_game_won()
     {
-		state = GameStates.WAIT;
+		state = GameStates.WIN;
     }
 }

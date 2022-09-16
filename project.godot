@@ -24,6 +24,12 @@ config/name="match3"
 run/main_scene="res://scenes/game_window.tscn"
 config/icon="res://icon.png"
 
+[autoload]
+
+ConfigManager="*res://scripts/ConfigManager.cs"
+GameDataManager="*res://scripts/GameDataManager.cs"
+SoundManager="*res://scenes/SoundManager.tscn"
+
 [display]
 
 window/size/width=576

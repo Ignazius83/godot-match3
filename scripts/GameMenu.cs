@@ -5,6 +5,7 @@ public class GameMenu : Control
 {
     private MainMenuPanel main;
     private SettingsPanel setting;
+    [Signal] delegate void read_sound();
 
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
@@ -13,9 +14,15 @@ public class GameMenu : Control
         setting = GetNode("Settings") as SettingsPanel;
         main.slide_in();
     }
-
+   
+    private void _on_Settings_sound_change()
+    {
+      
+      //  config.saveConfig();
+    }
     private void _on_Main_setting_pressed()
     {
+        EmitSignal("read_sound");
         main.slide_out();
         setting.slide_in();
     }

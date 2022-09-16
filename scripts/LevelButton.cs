@@ -1,4 +1,5 @@
 using Godot;
+using Godot.Collections;
 using System;
 
 public class LevelButton : Node2D
@@ -22,6 +23,11 @@ public class LevelButton : Node2D
         levelLabel = GetNode<Label>("TextureButton/Label");
         button = GetNode<TextureButton>("TextureButton");
         star = GetNode<Sprite>("Sprite");
+        var gameDataManager = GetNode<GameDataManager>("/root/GameDataManager");
+        if (gameDataManager.levelInfo.Contains(level))
+            enabled = (bool)((Dictionary)gameDataManager.levelInfo[level])["unlocked"];
+        else
+            enabled = false;
         setup();
     }
     private void _on_TextureButton_pressed()
