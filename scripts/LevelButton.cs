@@ -25,7 +25,13 @@ public class LevelButton : Node2D
         star = GetNode<Sprite>("Sprite");
         var gameDataManager = GetNode<GameDataManager>("/root/GameDataManager");
         if (gameDataManager.levelInfo.Contains(level))
+        {
             enabled = (bool)((Dictionary)gameDataManager.levelInfo[level])["unlocked"];
+            if ((int)((Dictionary)gameDataManager.levelInfo[level])["stars_unlocked"] == 1)
+                scoreGoalMeet = true;
+            else
+                scoreGoalMeet = false;
+        }
         else
             enabled = false;
         setup();

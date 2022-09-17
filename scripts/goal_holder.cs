@@ -1,14 +1,23 @@
 using Godot;
+using Godot.Collections;
 using System;
 
 public class goal_holder : Node2D
 {
    [Signal] delegate void create_goal(int newmax, Texture newtexture, string newvalue);
    [Signal] delegate void game_won();
+    private GameDataManager gameDataManager;
+    private int current_level = 0;
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
+        gameDataManager = GetNode<GameDataManager>("/root/GameDataManager");
         createGoals();
+    }
+
+    private void _on_top_ui_notify_of_level(int curentLevel)
+    {
+        current_level = curentLevel;
     }
 
     private void createGoals()
@@ -31,7 +40,16 @@ public class goal_holder : Node2D
     private void checkGameWin()
     {
         if (goalsMeet())
+        {
             EmitSignal("game_won");
+            gameDataManager.levelInfo.Add(current_level + 1, new Dictionary
+            {
+                ["unlocked"] = true,
+                ["high_score"] = 0,
+                ["stars_unlocked"] = 0
+            });
+
+        }
     }
 
 

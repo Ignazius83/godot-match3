@@ -1,4 +1,5 @@
 using Godot;
+using Godot.Collections;
 using System;
 
 public class top_ui : TextureRect
@@ -9,7 +10,11 @@ public class top_ui : TextureRect
     private HBoxContainer goalContainer;
     private int currentScore = 0;
     private int currentCount = 0;
+    [Export] private int currentLevel;
     [Export] private PackedScene goalPrefab;
+    private GameDataManager gameDataManager;
+
+    [Signal] delegate void notify_of_level(int curentLevel);
     public top_ui()
     {
         
@@ -48,6 +53,8 @@ public class top_ui : TextureRect
         counterLabel = GetNode("MarginContainer/HBoxContainer/CounterLabel") as Label;
         scoreBar = GetNode("MarginContainer/HBoxContainer/VBoxContainer/TextureProgress") as TextureProgress;
         goalContainer = GetNode<HBoxContainer>("MarginContainer/HBoxContainer/HBoxContainer");
+        gameDataManager = GetNode<GameDataManager>("/root/GameDataManager");
+        EmitSignal("notify_of_level", currentLevel);
         _on_grid_update_score(currentScore);
     }
     private void _on_grid_update_score(int amauntToChange)
@@ -55,6 +62,13 @@ public class top_ui : TextureRect
         currentScore += amauntToChange;
         updateScoreBar();
         scoreLabel.Text = currentScore.ToString();
+        ((Dictionary)gameDataManager.levelInfo[currentLevel])["high_score"] = currentScore;
+         if (currentScore>=scoreBar.MaxValue)
+           ((Dictionary)gameDataManager.levelInfo[currentLevel])["stars_unlocked"] = 1;
+
+
+        GD.Print(gameDataManager.levelInfo[currentLevel]);
+
     }
 
     private void setupScoreBar(int maxScore)

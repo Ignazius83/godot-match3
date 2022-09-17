@@ -115,6 +115,7 @@ one_shot = true
 [node name="MusicPlayer" type="Node" parent="."]
 script = ExtResource( 17 )
 
+[connection signal="notify_of_level" from="CanvasLayer/top_ui" to="goal_holder" method="_on_top_ui_notify_of_level"]
 [connection signal="pause_game" from="CanvasLayer/bottom_ui" to="Pause" method="_on_bottom_ui_pause_game"]
 [connection signal="camera_effect" from="grid" to="Camera2D" method="_on_grid_camera_effect"]
 [connection signal="check_goal" from="grid" to="CanvasLayer/top_ui" method="_on_grid_check_goal"]
