@@ -29,6 +29,7 @@ config/icon="res://icon.png"
 ConfigManager="*res://scripts/ConfigManager.cs"
 GameDataManager="*res://scripts/GameDataManager.cs"
 SoundManager="*res://scenes/SoundManager.tscn"
+BoosterInfo="*res://scripts/BoosterInfo.cs"
 
 [display]
 

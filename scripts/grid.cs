@@ -6,7 +6,8 @@ using System.Linq;
 enum GameStates {
 	WAIT,
 	MOVE,
-	WIN
+	WIN,
+	BOOSTER
 }
 
 
@@ -55,8 +56,10 @@ public class grid : Node2D
 
 	[Signal]
 	delegate void update_counter(int amauntToChange);
-	[Export] private int current_counter_value;
+	[Export] private int current_counter_value;	
 	[Export] private bool is_moves;
+	[Signal]
+	delegate void set_max_counter(int new_max_counter);
 
 	[Signal]
 	delegate void game_over();
@@ -85,6 +88,9 @@ public class grid : Node2D
 	[Signal] delegate void place_camera(Vector2 placement);
 	[Signal] delegate void camera_effect();
 
+	//booster
+	private string boosterType;
+
 	private PackedScene[] possible_pieces = new PackedScene[]
 	{
 		ResourceLoader.Load("res://scenes/blue_piece.tscn") as PackedScene,
@@ -112,6 +118,7 @@ public class grid : Node2D
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
+		EmitSignal("set_max_counter", current_counter_value);
 		state = GameStates.MOVE;
 
 		GD.Randomize();
@@ -126,14 +133,36 @@ public class grid : Node2D
 		spawnLock();
 		spawnConcrete();
 		spawnSlime();
-		EmitSignal("update_counter", current_counter_value);
+		EmitSignal("update_counter", current_counter_value);		
 		EmitSignal("setup_max_score", max_score);
 
 		if (!is_moves)
 			(GetNode("Timer") as Timer).Start();
 	}
 
-	private void moveCamera()
+	private void _on_bottom_ui_booster(string booster_type)
+    {
+		makeBoosterActive(booster_type);
+		
+
+	}
+
+	private void makeBoosterActive(string booster_type)
+	{
+		if (state == GameStates.MOVE)
+		{
+			state = GameStates.BOOSTER;
+			boosterType = booster_type;
+
+		}
+		else if (state == GameStates.BOOSTER)
+		{
+			state = GameStates.MOVE;
+			boosterType = "";
+		}
+	}
+
+    private void moveCamera()
     {
 		var newPos = gridToPixel((int)(width/2 - 0.5), (int)(height/2 -0.5));
 		EmitSignal("place_camera", newPos);
@@ -739,12 +768,57 @@ public class grid : Node2D
 
 	public override void _Process(float delta)
 	{
+		
 		if (state == GameStates.MOVE)
-		   touchInput();
+			touchInput();
+	     if (state == GameStates.BOOSTER)
+			boosterInput();
 
 	}
 
-	private void findBombs()
+    private void boosterInput()
+    {
+		
+		if (Input.IsActionJustPressed("ui_touch"))
+		{
+			GD.Print(state);
+			if (boosterType == "ColorBomb")
+				makeColorBomb(pixelToGrid(GetGlobalMousePosition().x, GetGlobalMousePosition().y));
+
+			else if (boosterType == "AddCounter")
+			{
+				var temp = GetGlobalMousePosition();
+				if (isInGrid(pixelToGrid(temp.x,temp.y)))
+					addToCounter();
+			}
+
+			
+
+		}
+	}
+
+	private void addToCounter()
+    {
+		if (is_moves)
+			EmitSignal("update_counter", 5);
+		else
+			EmitSignal("update_counter", 10);
+		state = GameStates.MOVE;
+	}
+
+	private void makeColorBomb(Vector2 gridPos)
+    {
+		if (isInGrid(gridPos))
+		{
+			if (all_pieces[(int)gridPos.x, (int)gridPos.y] != null)
+			{
+				all_pieces[(int)gridPos.x, (int)gridPos.y].makeColorBomb();
+				state = GameStates.MOVE;
+			}
+		}
+	}
+
+    private void findBombs()
 	{ 
 		if (color_momb_used) return;
 		

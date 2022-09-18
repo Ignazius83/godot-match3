@@ -12,7 +12,6 @@ currentLevel = 1
 width = 6
 height = 6
 max_score = 200
-current_counter_value = 40
 
 [node name="Goal" parent="goal_holder" index="0"]
 goalTexture = ExtResource( 2 )

@@ -10,6 +10,7 @@ public class top_ui : TextureRect
     private HBoxContainer goalContainer;
     private int currentScore = 0;
     private int currentCount = 0;
+    private int max_counter = 0;
     [Export] private int currentLevel;
     [Export] private PackedScene goalPrefab;
     private GameDataManager gameDataManager;
@@ -41,10 +42,18 @@ public class top_ui : TextureRect
     {
         setupScoreBar(maxScore);
     }
+
+    private void _on_grid_set_max_counter(int new_max_counter)
+    {
+        max_counter = new_max_counter;
+    }
     private void _on_grid_update_counter(int amauntToChange)
     {
         currentCount += amauntToChange;
+        if (currentCount > max_counter)
+            currentCount = max_counter;
         counterLabel.Text = currentCount.ToString();
+        GD.Print(amauntToChange);
     }
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
