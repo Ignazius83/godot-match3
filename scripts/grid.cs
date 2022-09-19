@@ -15,8 +15,8 @@ public class grid : Node2D
 {
 	private GameStates state;
 
-	[Export] private int width;
-	[Export] private int height;
+	 private int width;
+	 private int height;
 	[Export] private int x_start;
 	[Export] private int y_start;
 	[Export] private int offset;
@@ -47,20 +47,20 @@ public class grid : Node2D
 	delegate void make_slime(Vector2 boardPosition);
 
 	[Signal]
-	delegate void update_score(int amauntToChange);
-	[Signal]
-	delegate void setup_max_score(int maxScore);
-	[Export] private int max_score;
-	[Export] private int piece_value;
+	delegate void update_score(int streak);
+	//[Signal]
+	//delegate void setup_max_score(int maxScore);
+	//[Export] private int max_score;
+	//[Export] private int piece_value;
 	private int streak = 1;
 
 	[Signal]
-	delegate void update_counter(int amauntToChange);
-	[Export] private int current_counter_value;	
+	delegate void update_counter();
+	/*[Export] private int current_counter_value;	
 	[Export] private bool is_moves;
 	[Signal]
 	delegate void set_max_counter(int new_max_counter);
-
+	*/
 	[Signal]
 	delegate void game_over();
 
@@ -91,16 +91,8 @@ public class grid : Node2D
 	//booster
 	private string boosterType;
 
-	private PackedScene[] possible_pieces = new PackedScene[]
-	{
-		ResourceLoader.Load("res://scenes/blue_piece.tscn") as PackedScene,
-		ResourceLoader.Load("res://scenes/green_piece.tscn") as PackedScene,
-		ResourceLoader.Load("res://scenes/pink_piece.tscn") as PackedScene,
-		ResourceLoader.Load("res://scenes/orange_piece.tscn") as PackedScene,
-		ResourceLoader.Load("res://scenes/light_green_piece.tscn") as PackedScene,
-		//ResourceLoader.Load("res://scenes/yellow_piece.tscn") as PackedScene,
-
-	};
+	[Export] private string[] possible_pieces;
+	
 	private Piece[,] all_pieces;
 	private Piece[,] clone_array;
 	private Vector2[] current_matches = new Vector2[] { };
@@ -118,7 +110,7 @@ public class grid : Node2D
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
-		EmitSignal("set_max_counter", current_counter_value);
+		//EmitSignal("set_max_counter", current_counter_value);
 		state = GameStates.MOVE;
 
 		GD.Randomize();
@@ -133,11 +125,11 @@ public class grid : Node2D
 		spawnLock();
 		spawnConcrete();
 		spawnSlime();
-		EmitSignal("update_counter", current_counter_value);		
-		EmitSignal("setup_max_score", max_score);
+		///EmitSignal("update_counter", current_counter_value);		
+		//EmitSignal("setup_max_score", max_score);
 
-		if (!is_moves)
-			(GetNode("Timer") as Timer).Start();
+		//if (!is_moves)
+			//(GetNode("Timer") as Timer).Start();
 	}
 
 	private void _on_bottom_ui_booster(string booster_type)
@@ -257,7 +249,7 @@ public class grid : Node2D
 		for (int i = 0; i < width; i++)
 			for (int j = 0; j < height; j++)
 			{
-				if (!restrictedFill(new Vector2(i, j)) && clone_array[i, j] != null)
+				if (!restrictedMove(new Vector2(i, j)) && clone_array[i, j] != null)
 				{
 					if (switchAndCheck(new Vector2(i, j), new Vector2(1, 0), ref clone_array) &&  isInGrid(new Vector2(i + 1, j)) && !restrictedMove(new Vector2(i + 1, j)))
 					{
@@ -378,13 +370,13 @@ public class grid : Node2D
 				if (!restrictedFill(new Vector2(i, j)) && all_pieces[i,j] == null)
 				{
 					var rand = (int)Math.Floor(GD.RandRange(0, possible_pieces.Length));
-					var piece = (Piece)possible_pieces[rand].Instance();
+					var piece = (Piece)ResourceLoader.Load<PackedScene>(possible_pieces[rand]).Instance();
 
 					var loops = 0;
 					while (mathAt(i, j, piece.color) && loops < 100)
 					{
 						rand = (int)Math.Floor(GD.RandRange(0, possible_pieces.Length));
-						piece = (Piece)possible_pieces[rand].Instance();
+						piece = (Piece)ResourceLoader.Load<PackedScene>(possible_pieces[rand]).Instance();
 						loops += 1;
 					}
 					AddChild(piece);
@@ -413,7 +405,7 @@ public class grid : Node2D
 
 		for (int i = 0; i < preset_spaces.Length; i++)
         {
-			var piece = possible_pieces[(int)preset_spaces[i].z].Instance<Piece>();
+			var piece = ResourceLoader.Load<PackedScene>(possible_pieces[(int)preset_spaces[i].z]).Instance<Piece>();
 			AddChild(piece);
 			piece.Position = gridToPixel((int)preset_spaces[i].x, (int)preset_spaces[i].y);
 			all_pieces[(int)preset_spaces[i].x, (int)preset_spaces[i].y] = piece;
@@ -799,10 +791,11 @@ public class grid : Node2D
 
 	private void addToCounter()
     {
-		if (is_moves)
+		/*if (is_moves)
 			EmitSignal("update_counter", 5);
 		else
 			EmitSignal("update_counter", 10);
+		*/
 		state = GameStates.MOVE;
 	}
 
@@ -1037,7 +1030,7 @@ public class grid : Node2D
 						makeEffect(animatedEffect, i, j);
 						EmitSignal("play_sound");
 						camEffect();
-						EmitSignal("update_score", piece_value * streak);
+						EmitSignal("update_score", streak);
 					}					
 						
 				}
@@ -1128,13 +1121,13 @@ public class grid : Node2D
 				if (all_pieces[i, j] == null && !restrictedFill(new Vector2(i, j)))
 				{
 					var rand = (int)Math.Floor(GD.RandRange(0, possible_pieces.Length));
-					var piece = (Piece)possible_pieces[rand].Instance();
+					var piece = (Piece)ResourceLoader.Load<PackedScene>(possible_pieces[rand]).Instance();
 
 					var loops = 0;
 					while (mathAt(i, j, piece.color) && loops < 100)
 					{
 						rand = (int)Math.Floor(GD.RandRange(0, possible_pieces.Length));
-						piece = (Piece)possible_pieces[rand].Instance();
+						piece = (Piece)ResourceLoader.Load<PackedScene>(possible_pieces[rand]).Instance();
 						loops += 1;
 					}
 					AddChild(piece);
@@ -1210,7 +1203,7 @@ public class grid : Node2D
 		color_momb_used = false;
 		if (isDeadLocked())
 			GetNode<Timer>("ShuffleTimer").Start();
-		if (is_moves)
+		/*if (is_moves)
         {
 			if (state != GameStates.WIN)
 			{
@@ -1223,9 +1216,10 @@ public class grid : Node2D
 					state = GameStates.MOVE;
 			}			
 				
-		}
+		}*/
+		EmitSignal("update_counter");
+		state = GameStates.MOVE;
 
-		
 		(GetNode("HintTimer") as Timer).Start();
 	}
 
@@ -1286,17 +1280,7 @@ public class grid : Node2D
 
 	}
 
-   private void _on_Timer_timeout()
-   {
-		current_counter_value -= 1;
-		EmitSignal("update_counter",-1);
-		if (current_counter_value == 0)
-		{
-			if (state !=GameStates.WIN)
-			   declareGameOver();
-			GetNode<Timer>("Timer").Stop();
-		}
-   }
+  
 
    private void declareGameOver()
    {
@@ -1307,5 +1291,11 @@ public class grid : Node2D
 	private void _on_goal_holder_game_won()
     {
 		state = GameStates.WIN;
+    }
+
+	private void _on_GameManager_set_dimentions(int new_width, int new_height)
+    {
+		width = new_width;
+		height = new_height;
     }
 }

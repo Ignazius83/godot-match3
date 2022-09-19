@@ -9,16 +9,15 @@ public class GoalPrefab : TextureRect
     private Texture goalTexture;
     private Label goalLabel;
     private TextureRect this_texture;
-
-    // Called when the node enters the scene tree for the first time.
-    public override void _Ready()
-    {
-        goalLabel = GetNode<Label>("VBoxContainer/Label");
-        this_texture = GetNode<TextureRect>("VBoxContainer/TextureRect");
-    }
+  
 
     public void setGoalValues(int newmax, Texture newtexture, string newvalue)
     {
+        if (goalLabel == null)
+            goalLabel = GetNode<Label>("VBoxContainer/Label");
+        if (this_texture == null)
+            this_texture = GetNode<TextureRect>("VBoxContainer/TextureRect");
+
         this_texture.Texture = newtexture;
         maxValue = newmax;
         goalValue = newvalue;

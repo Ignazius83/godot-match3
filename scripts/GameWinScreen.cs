@@ -10,7 +10,7 @@ public class GameWinScreen : BaseMenuPanel
         
     }
 
-    private void _on_goal_holder_game_won()
+    private void _on_GameManager_game_won()
     {
         if (!is_aut)
         {
