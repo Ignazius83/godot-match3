@@ -3,13 +3,13 @@ using System;
 
 public class GameOverPanel : BaseMenuPanel
 {
-    private void _on_grid_game_over()
+    private void _on_GameManager_game_lost()
     {
         slide_in();
     }
     private void _on_QuitButton_pressed ()
     {
-        GetTree().ChangeScene("res://scenes/GameMenu.tscn");
+        GetTree().ChangeScene("res://scenes/LevelSelectScene.tscn");
     }
     private void _on_Restart_pressed()
     {

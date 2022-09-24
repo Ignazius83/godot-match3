@@ -16,6 +16,8 @@ public class GameDataManager : Node
          }
      };
 
+    public int levelScrollValue = 0;
+
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
@@ -50,6 +52,11 @@ public class GameDataManager : Node
         return read;
 
 
+    }
+
+    public void  changeLevelScrollValue(int value)
+    {
+        levelScrollValue = value;
     }
 
 

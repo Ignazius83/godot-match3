@@ -2,11 +2,12 @@ using Godot;
 using Godot.Collections;
 using System;
 
-public class GameManager : Node
+public class GameManager : Node2D
 {
     //grid
     [Export] private int width;
     [Export] private int height;
+    private bool boardStable = true;
 
     //level
     [Export] private int level;
@@ -30,17 +31,102 @@ public class GameManager : Node
     delegate void set_score_info(int max_score, int current_score);
     [Signal]
     delegate void set_counter_info(int current_counter);
+
+    [Signal]
+    delegate void screen_fade_in();
+    [Signal]
+    delegate void screen_fade_out();
+
     [Signal] delegate void create_goal(int newmax, Texture newtexture, string newvalue);
-    [Signal] delegate void game_won();
+   
+    [Signal] delegate void game_won(int scoreToDisplay);
+    [Signal] delegate void game_lost();
 
     private GameDataManager dataManager;
     private bool game_Won = false;
+    private bool game_Lost = false;
+    [Signal] delegate void grid_change_move();
+
+    private bool boosterActive = false;
+    private string currentBooster = "";
+    [Signal] delegate void color_bomb(Vector2 position);
+    [Signal] delegate void destroy_piece(Vector2 position);
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
          dataManager  = GetNode<GameDataManager>("/root/GameDataManager");
         _goal_holder = GetNode<Node2D>("goal_holder");
         setup();
+    }
+
+    public override void _Process(float delta)
+    {
+        if (Input.IsActionJustPressed("ui_touch") && currentBooster != "")
+            booster_input();
+    }
+
+    private void booster_input()
+    {
+        if (currentBooster == "ColorBomb")
+            EmitSignal("color_bomb", GetGlobalMousePosition());
+        else if (currentBooster == "DestroyPiece")
+            EmitSignal("destroy_piece", GetGlobalMousePosition());
+
+        else if (currentBooster == "AddCounter")
+        {
+            var temp = GetGlobalMousePosition();
+
+            if (temp.x > 20 && temp.x < 556)
+                if (temp.y > 200 && temp.y < 1000)
+                {
+                    current_counter += 10;
+                    if (current_counter > max_counter)
+                        current_counter = max_counter;
+                    EmitSignal("set_counter_info", current_counter);
+                    _on_bottom_ui_booster(currentBooster);
+                }                   
+        }
+       
+    }
+    private void changeBoardState()
+    {
+        boardStable = !boardStable;
+        checkGameWin();
+    }
+    private void resetBooster()
+    {
+        currentBooster = "";
+        EmitSignal("screen_fade_out");
+        boosterActive = false;
+    }
+
+    private void _on_grid_reset_booster()
+    {
+        resetBooster();
+    }
+    private void _on_grid_change_move_state()
+    {        
+        changeBoardState();
+    }   
+
+    private void _on_bottom_ui_booster(string booster_type)
+    {
+        GD.Print(booster_type);
+        if (boosterActive && boardStable)
+        {
+            currentBooster = "";
+            EmitSignal("screen_fade_out");
+            EmitSignal("grid_change_move");
+            boosterActive = false;
+        }
+        else if (!boosterActive && boardStable)
+        {
+            currentBooster = booster_type;
+            EmitSignal("screen_fade_in");
+            EmitSignal("grid_change_move");
+            boosterActive = true;
+           
+        }
     }
 
     private void setup()
@@ -78,9 +164,9 @@ public class GameManager : Node
 
     private void checkGameWin()
     {
-        if (goalsMeet())
+        if (goalsMeet() && boardStable)
         {
-            EmitSignal("game_won");
+            EmitSignal("game_won",current_score);
             if (!dataManager.levelInfo.Contains(level + 1))
                dataManager.levelInfo.Add(level + 1, new Dictionary
               {
@@ -115,26 +201,35 @@ public class GameManager : Node
         EmitSignal("set_score_info", max_score, current_score);
     }
 
+    private void updateCounter()
+    {
+        if (!boosterActive)
+        {
+            current_counter -= 1;
+            if (current_counter <= 0)
+            {
+                current_counter = 0;
+                if (!game_Lost && boardStable)
+                {
+                    EmitSignal("game_lost");
+                    game_Lost = true;
+                    GetNode<Timer>("MoveTimer").Stop();
+                }
+            }
+            EmitSignal("set_counter_info", current_counter);
+        }
+    }
+
     private void _on_grid_update_counter()
     {
         if (is_moves)
-        {
-            current_counter -= 1;
-            if (current_counter < 0)
-                current_counter = 0;
-            EmitSignal("set_counter_info", current_counter);
-        }
+            updateCounter();
     }
 
     private void _on_MoveTimer_timeout()
     {
         if (!is_moves && !game_Won)
-        {
-            current_counter -= 1;
-            if (current_counter < 0)
-                current_counter = 0;
-            EmitSignal("set_counter_info", current_counter);
-        }
+            updateCounter();
     }
 
 

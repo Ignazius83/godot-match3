@@ -17,6 +17,8 @@ public class LevelButton : Node2D
     private Label levelLabel;
     private TextureButton button;
     private Sprite star;
+
+    
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
@@ -39,7 +41,11 @@ public class LevelButton : Node2D
     private void _on_TextureButton_pressed()
     {
         if (enabled)
-           GetTree().ChangeScene(levelToLoad);
+        {
+            GetParent().EmitSignal("save_scroll_value");
+            GetTree().ChangeScene(levelToLoad);
+        }
+      
 
     }
     private void setup()

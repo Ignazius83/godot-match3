@@ -15,7 +15,14 @@ public class grid : Node2D
 {
 	private GameStates state;
 
-	 private int width;
+	private bool canMove= true;
+	[Signal]
+	delegate void change_move_state();
+
+	[Signal]
+	delegate void reset_booster();
+
+	private int width;
 	 private int height;
 	[Export] private int x_start;
 	[Export] private int y_start;
@@ -47,26 +54,14 @@ public class grid : Node2D
 	delegate void make_slime(Vector2 boardPosition);
 
 	[Signal]
-	delegate void update_score(int streak);
-	//[Signal]
-	//delegate void setup_max_score(int maxScore);
-	//[Export] private int max_score;
-	//[Export] private int piece_value;
+	delegate void update_score(int streak);	
 	private int streak = 1;
 
 	[Signal]
 	delegate void update_counter();
-	/*[Export] private int current_counter_value;	
-	[Export] private bool is_moves;
-	[Signal]
-	delegate void set_max_counter(int new_max_counter);
-	*/
-	[Signal]
-	delegate void game_over();
 
 	[Signal]
 	delegate void check_goal(string goal_type);
-
 	private bool color_momb_used = false;
 
 
@@ -88,9 +83,6 @@ public class grid : Node2D
 	[Signal] delegate void place_camera(Vector2 placement);
 	[Signal] delegate void camera_effect();
 
-	//booster
-	private string boosterType;
-
 	[Export] private string[] possible_pieces;
 	
 	private Piece[,] all_pieces;
@@ -110,9 +102,6 @@ public class grid : Node2D
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
-		//EmitSignal("set_max_counter", current_counter_value);
-		state = GameStates.MOVE;
-
 		GD.Randomize();
 		moveCamera();
 		all_pieces = new Piece[width, height];
@@ -124,35 +113,13 @@ public class grid : Node2D
 		spawnIce();
 		spawnLock();
 		spawnConcrete();
-		spawnSlime();
-		///EmitSignal("update_counter", current_counter_value);		
-		//EmitSignal("setup_max_score", max_score);
-
-		//if (!is_moves)
-			//(GetNode("Timer") as Timer).Start();
+		spawnSlime();		
 	}
 
-	private void _on_bottom_ui_booster(string booster_type)
+	private void _on_GameManager_grid_change_move()
     {
-		makeBoosterActive(booster_type);
-		
-
-	}
-
-	private void makeBoosterActive(string booster_type)
-	{
-		if (state == GameStates.MOVE)
-		{
-			state = GameStates.BOOSTER;
-			boosterType = booster_type;
-
-		}
-		else if (state == GameStates.BOOSTER)
-		{
-			state = GameStates.MOVE;
-			boosterType = "";
-		}
-	}
+		canMove = !canMove;
+    }
 
     private void moveCamera()
     {
@@ -239,7 +206,8 @@ public class grid : Node2D
 			}
 		if (isDeadLocked())
 			shuffleBoard();
-		state = GameStates.MOVE;
+		canMove = true;
+		EmitSignal("change_move_state");
 	}
 	private List<Piece> findAllMatches()
     {
@@ -304,12 +272,7 @@ public class grid : Node2D
 			_hint.setup(hints[(int)rand].GetNode<Sprite>("Sprite").Texture);
 		}
 		GD.Print(hints.Count);
-		//destroy_hint()
-
-		//hint = hint_effect.instance()
-		//add_child(hint)
-		//hint.position = hints[rand].position
-		//hint.Setup(hints[rand].get_node("Sprite").texture)
+		
 	}
 	private void switchPieces(Vector2 place, Vector2 direction, ref Piece[,] array)
     {
@@ -482,7 +445,8 @@ public class grid : Node2D
 		if (pieceOne != null && pieceTwo != null)		
 			swapPieces((int)lastPlace.x, (int)lastPlace.y, lastDirection);
 			
-		state = GameStates.MOVE;
+		canMove = true;
+		EmitSignal("change_move_state");
 		move_checked = false;
 	    (GetNode("HintTimer") as Timer).Start();
 
@@ -585,7 +549,8 @@ public class grid : Node2D
 						
 				}
 				storeInfo(firstPiece, otherPiece, new Vector2(coll, row), direction);
-				state = GameStates.WAIT;
+				canMove = false;
+				EmitSignal("change_move_state");
 
 				all_pieces[coll, row] = otherPiece;
 				all_pieces[coll + (int)direction.x, row + (int)direction.y] = firstPiece;
@@ -760,43 +725,29 @@ public class grid : Node2D
 
 	public override void _Process(float delta)
 	{
-		
-		if (state == GameStates.MOVE)
+
+		if (canMove)
 			touchInput();
-	     if (state == GameStates.BOOSTER)
-			boosterInput();
-
+	 
 	}
 
-    private void boosterInput()
+	private void  _on_GameManager_color_bomb( Vector2 position)
     {
-		
-		if (Input.IsActionJustPressed("ui_touch"))
-		{
-			GD.Print(state);
-			if (boosterType == "ColorBomb")
-				makeColorBomb(pixelToGrid(GetGlobalMousePosition().x, GetGlobalMousePosition().y));
-
-			else if (boosterType == "AddCounter")
+		var temp = pixelToGrid(position.x, position.y);
+		if (isInGrid(temp))
+			makeColorBomb(temp);
+	}
+	private void _on_GameManager_destroy_piece(Vector2 position)
+	{
+		var temp = pixelToGrid(position.x, position.y);
+		if (isInGrid(temp))
+			if (all_pieces[(int)temp.x, (int)temp.y] != null)
 			{
-				var temp = GetGlobalMousePosition();
-				if (isInGrid(pixelToGrid(temp.x,temp.y)))
-					addToCounter();
+				all_pieces[(int)temp.x, (int)temp.y].matched = true;
+				destroyMached();
+				EmitSignal("reset_booster");
+
 			}
-
-			
-
-		}
-	}
-
-	private void addToCounter()
-    {
-		/*if (is_moves)
-			EmitSignal("update_counter", 5);
-		else
-			EmitSignal("update_counter", 10);
-		*/
-		state = GameStates.MOVE;
 	}
 
 	private void makeColorBomb(Vector2 gridPos)
@@ -805,8 +756,9 @@ public class grid : Node2D
 		{
 			if (all_pieces[(int)gridPos.x, (int)gridPos.y] != null)
 			{
-				all_pieces[(int)gridPos.x, (int)gridPos.y].makeColorBomb();
-				state = GameStates.MOVE;
+				all_pieces[(int)gridPos.x, (int)gridPos.y].makeColorBomb();				
+				EmitSignal("reset_booster");
+				canMove = true;
 			}
 		}
 	}
@@ -1020,8 +972,8 @@ public class grid : Node2D
 				{
 					if (all_pieces[i, j].matched)
 					{
-						if (state != GameStates.WIN)
-						   EmitSignal("check_goal", all_pieces[i, j].color);
+						
+						EmitSignal("check_goal", all_pieces[i, j].color);
 						damageSpecial(i, j);
 						was_mached = true;
 						all_pieces[i, j].QueueFree();
@@ -1195,31 +1147,17 @@ public class grid : Node2D
 			}
 		if (!damageSlime)
 			generateSlime();
-
 		
 		streak = 1;
 		move_checked = false;
 		damageSlime = false;
 		color_momb_used = false;
 		if (isDeadLocked())
-			GetNode<Timer>("ShuffleTimer").Start();
-		/*if (is_moves)
-        {
-			if (state != GameStates.WIN)
-			{
-				
-				current_counter_value -= 1;
-				EmitSignal("update_counter", -1);
-				if (current_counter_value == 0)
-					declareGameOver();
-				else
-					state = GameStates.MOVE;
-			}			
-				
-		}*/
+			GetNode<Timer>("ShuffleTimer").Start();		
+		
+		canMove = true;
+		EmitSignal("change_move_state");
 		EmitSignal("update_counter");
-		state = GameStates.MOVE;
-
 		(GetNode("HintTimer") as Timer).Start();
 	}
 
@@ -1281,17 +1219,15 @@ public class grid : Node2D
 	}
 
   
-
-   private void declareGameOver()
-   {
-		EmitSignal("game_over");
-		state = GameStates.WAIT;
-   }
-
-	private void _on_goal_holder_game_won()
+	private void _on_GameManager_game_lost()
     {
-		state = GameStates.WIN;
-    }
+		canMove = false;
+	}
+
+	private void _on_GameManager_game_won(int scoreToDisplay)
+    {
+		canMove = false;		
+	}
 
 	private void _on_GameManager_set_dimentions(int new_width, int new_height)
     {

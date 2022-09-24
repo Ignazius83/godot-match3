@@ -10,6 +10,8 @@ public class BoosterManager : HBoxContainer
     {
         boosterInfo = GetNode<BoosterInfo>("/root/BoosterInfo");
         boosterInfo.boosterInfo[1] = "AddCounter";
+        boosterInfo.boosterInfo[2] = "ColorBomb";
+        boosterInfo.boosterInfo[3] = "DestroyPiece";
         activateBoosterButtons();
     }
     public void activateBoosterButtons()
