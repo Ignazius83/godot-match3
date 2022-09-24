@@ -445,8 +445,7 @@ public class grid : Node2D
 		if (pieceOne != null && pieceTwo != null)		
 			swapPieces((int)lastPlace.x, (int)lastPlace.y, lastDirection);
 			
-		canMove = true;
-		EmitSignal("change_move_state");
+		canMove = true;	
 		move_checked = false;
 	    (GetNode("HintTimer") as Timer).Start();
 
@@ -744,8 +743,11 @@ public class grid : Node2D
 			if (all_pieces[(int)temp.x, (int)temp.y] != null)
 			{
 				all_pieces[(int)temp.x, (int)temp.y].matched = true;
-				destroyMached();
+				canMove = false;
 				EmitSignal("reset_booster");
+				EmitSignal("change_move_state");
+				destroyMached();
+				
 
 			}
 	}
